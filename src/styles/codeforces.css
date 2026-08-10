@@ -1,0 +1,818 @@
+@import url('https://fonts.googleapis.com/css2?family=Cuprum&display=swap');
+
+/* ====================================================================
+   Codeforces Virtual Contests — Pixel-Perfect CSS
+   Faithfully replicates every detail of the actual Codeforces UI.
+   ==================================================================== */
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+
+
+body, html {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    font-family: verdana, arial, sans-serif;
+    font-size: 13px;
+    color: #000;
+    line-height: 1.6;
+}
+
+a { color: #1a5cc8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- CSS Variables (matching CF) ---- */
+:root {
+    --border-radius: 6px;
+    --border-color: rgb(185, 185, 185);
+    --muted-color: #666;
+    --notice-color: #888;
+    --highlighted-blue-color: #def;
+    --success-color: green;
+    --warning-color: #ff8c00;
+    --error-color: red;
+    --menu-blue: #3B5998;
+}
+
+/* ---- Global Page Structure ---- */
+#body {
+    padding-top: 0.75em;
+    max-width: 1200px;
+    min-width: 920px;
+    margin: 0 auto;
+}
+
+#pageContent {
+    margin: 0 1em 1em 1em;
+    padding-top: 0.5em;
+    min-height: 20em;
+}
+
+.content-with-sidebar {
+    margin-right: 22em !important;
+}
+
+/* ---- Header ---- */
+#header {
+    min-height: 5em;
+    margin: 0 1em;
+}
+
+.lang-chooser {
+    float: right;
+    text-align: right;
+    margin-top: 1.5em;
+}
+
+.lang-chooser img {
+    vertical-align: middle;
+    margin: 0 2px;
+    height: 16px;
+    width: auto;
+}
+
+.lang-chooser .user-handle {
+    font-weight: bold;
+}
+
+.lang-chooser div {
+    font-size: 12px;
+    padding: 3px 0;
+}
+
+.logo-href {
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 10px;
+    color: black !important;
+}
+
+/* -- Main Navigation Menu -- */
+.menu-box {
+    margin: 1em 1em 0.5em 1em;
+    padding: 0;
+    height: 44px;
+    line-height: 44px;
+}
+
+.menu-list-container {
+    margin: 0;
+    height: 100%;
+}
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+}
+
+.menu-list li {
+    font-family: 'Cuprum', sans-serif;
+    float: left;
+    list-style: none;
+    margin-right: 1.2em;
+    padding: 5;
+    position: relative;
+    height: 100%;
+}
+
+.menu-list li a {
+    font-weight: normal;
+    font-size: 15px;
+    text-decoration: none;
+    color: #000;
+    outline: none;
+    text-align: center;
+    display: block;
+    float: left;
+    height: 100%;
+    margin: 0;
+    line-height: 44px;
+    text-transform: uppercase;
+    padding: 0 4px;
+}
+
+.menu-list li a:hover,
+.menu-list li a:active,
+.menu-list li a:visited {
+    border: none;
+}
+
+.menu-list li.current {
+    border-bottom: 3px solid var(--menu-blue);
+}
+
+/* Search form in menu */
+.search {
+    border: 1px solid #d4d4d4;
+    color: #666;
+    font-size: 12px;
+    height: 20px;
+    width: 120px;
+    line-height: 18px;
+    float: right;
+    padding: 1px 1px 1px 16px;
+    margin: 10px 1em 0 0;
+    background: #f4f4f4 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%223%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%20fill%3D%22none%22%2F%3E%3Cline%20x1%3D%226.5%22%20y1%3D%226.5%22%20x2%3D%229%22%20y2%3D%229%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%2F%3E%3C%2Fsvg%3E') 3px center no-repeat;
+}
+
+/* ---- Two-Column Layout ---- */
+#sidebar {
+    float: right;
+    width: 20em;
+    display: inline;
+    margin: 1em 1em 1em -22em;
+    font-size: 12px;
+}
+
+#content {
+    margin: 1em;
+    margin-right: 22em;
+    padding: 0 0.5em;
+}
+
+.content-with-sidebar {
+    margin-right: 22em !important;
+}
+
+.clear { clear: both; }
+
+/* ---- Border Radius ---- */
+.borderTopRound {
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.borderBottomRound {
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+}
+
+.borderRound {
+    border-radius: var(--border-radius);
+}
+
+/* ---- Roundbox ---- */
+.roundbox {
+    border: 1px solid var(--border-color);
+    position: relative;
+    background-color: white;
+    margin-bottom: 1.5em;
+}
+
+.roundbox .caption {
+    margin: 0.2em 0;
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--menu-blue);
+    position: relative;
+}
+
+.roundbox .caption.titled {
+    padding: 0 0 0.3em 0.5em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roundbox .caption .top-links {
+    font-size: 11px;
+    font-family: arial;
+    position: absolute;
+    right: 0.5em;
+    top: 0.3em;
+}
+
+.roundbox .bottom-links {
+    font-family: arial;
+    font-size: 11px;
+    border-top: 1px solid var(--border-color);
+    background-color: #f5f5f5;
+    padding: 0.45em;
+}
+
+.roundbox .bottom-links a {
+    margin: 0.1em;
+}
+
+.roundbox-content {
+    padding: 0.7em;
+    font-size: 12px;
+}
+
+.roundbox .dark {
+    background-color: #f5f5f5;
+}
+
+/* Roundbox corner divs (CSS equivalent of CF's corner images) */
+.roundbox .lt, .roundbox .rt, .roundbox .lb, .roundbox .rb {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    z-index: 1;
+}
+
+.roundbox .lt { top: -1px; left: -1px; border-top-left-radius: var(--border-radius); }
+.roundbox .rt { top: -1px; right: -1px; border-top-right-radius: var(--border-radius); }
+.roundbox .lb { bottom: -1px; left: -1px; border-bottom-left-radius: var(--border-radius); }
+.roundbox .rb { bottom: -1px; right: -1px; border-bottom-right-radius: var(--border-radius); }
+
+/* ---- Datatable ---- */
+.datatable {
+    width: 100%;
+    position: relative;
+    background-color: #e1e1e1;
+    font-size: 12px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* Datatable corner divs */
+.datatable .lt, .datatable .rt, .datatable .lb, .datatable .rb {
+    position: absolute;
+    z-index: 1;
+}
+
+.datatable .lt {
+    width: 6px;
+    height: 6px;
+    left: 0;
+    top: 0;
+}
+
+.datatable .rt {
+    width: 6px;
+    height: 6px;
+    right: 0;
+    top: 0;
+}
+
+.datatable .lb {
+    width: 4px;
+    height: 4px;
+    left: 0;
+    bottom: 0;
+}
+
+.datatable .rb {
+    width: 4px;
+    height: 4px;
+    right: 0;
+    bottom: 0;
+}
+
+.datatable .ilt, .datatable .irt {
+    position: absolute;
+    z-index: 1;
+}
+
+.datatable .ilt {
+    width: 6px;
+    height: 6px;
+    left: 0;
+    top: 0;
+}
+
+.datatable .irt {
+    width: 6px;
+    height: 6px;
+    right: 0;
+    top: 0;
+}
+
+/* Datatable caption area */
+.datatable .datatable-caption {
+    padding: 4px 0 0 6px;
+    font-size: 14px;
+    position: relative;
+}
+
+.datatable .datatable-caption .title {
+    font-weight: bold;
+    color: #3b5998;
+}
+
+.datatable .datatable-caption .row-count {
+    font-size: 11px;
+    color: var(--muted-color);
+    margin-left: 0.5em;
+}
+
+.datatable .datatable-caption .filter-control {
+    position: absolute;
+    right: 0.25em;
+    top: 0.35em;
+}
+
+.datatable .datatable-caption .filter-control span {
+    padding: 0;
+    position: relative;
+    bottom: 2px;
+}
+
+.datatable-caption-label {
+    position: relative;
+    bottom: 0.08em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    margin-left: 0.5em;
+    border: 1px solid #ccd8ee;
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+
+.datatable-caption-label-clear {
+    color: inherit !important;
+    font-size: 110%;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none !important;
+}
+
+/* Datatable inner table container */
+.datatable .datatable-inner {
+    background-color: white;
+    margin: 0.3em 3px 0 3px;
+    position: relative;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.datatable table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.datatable th {
+    background: #e1e1e1;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid #ccc;
+    padding: 6px 12px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 11px;
+    color: #000;
+    white-space: nowrap;
+}
+
+.datatable th:last-child { border-right: none; }
+.datatable th.left, .datatable td.left { text-align: left; }
+.datatable th.top, .datatable td.top { border-top: none; }
+.datatable th.bottom, .datatable td.bottom { border-bottom: none; }
+.datatable th.right, .datatable td.right { border-right: none; }
+
+.datatable th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.datatable th.sortable:hover {
+    background: #d5d5d5;
+}
+
+.datatable th.sort-asc::after {
+    content: ' ▲';
+    font-size: 8px;
+}
+
+.datatable th.sort-desc::after {
+    content: ' ▼';
+    font-size: 8px;
+}
+
+.datatable td {
+    border-top: 1px solid #e1e1e1;
+    border-right: 1px solid #e1e1e1;
+    padding: 0.4em;
+    font-size: 13px;
+    text-align: center;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.datatable td {
+    width: auto !important;
+    max-width: 20em !important;
+}
+
+.datatable td:last-child { border-right: none; }
+.datatable tr:last-child td { border-bottom: none; }
+.datatable tr.dark td { background-color: #f8f8f8; }
+.datatable tr:hover td { background-color: #eff3fa !important; }
+
+/* ---- User Rating Colors (CF standard) ---- */
+.rated-user {
+    font-weight: bold;
+}
+
+.user-black { color: #000 !important; }
+.user-gray { color: #808080 !important; font-weight: bold; }
+.user-green { color: #008000 !important; font-weight: bold; }
+.user-cyan { color: #03a89e !important; font-weight: bold; }
+.user-blue { color: #0000ff !important; font-weight: bold; }
+.user-violet { color: #aa00aa !important; font-weight: bold; }
+.user-orange { color: #ff8c00 !important; font-weight: bold; }
+.user-red { color: #ff0000 !important; font-weight: bold; }
+.user-legendary { color: #ff0000 !important; font-weight: bold; }
+.legendary-user-first-letter { color: #000 !important; }
+
+/* Backward compat aliases */
+.rating-unrated { color: #000 !important; }
+.rating-gray { color: #808080 !important; font-weight: bold; }
+.rating-green { color: #008000 !important; font-weight: bold; }
+.rating-cyan { color: #03a89e !important; font-weight: bold; }
+.rating-blue { color: #0000ff !important; font-weight: bold; }
+.rating-violet { color: #aa00aa !important; font-weight: bold; }
+.rating-orange { color: #ff8c00 !important; font-weight: bold; }
+.rating-red { color: #ff0000 !important; font-weight: bold; }
+.rating-legendary { color: #ff0000 !important; font-weight: bold; }
+
+/* ---- Delta Colors ---- */
+.delta-positive { color: #008000 !important; font-weight: bold; }
+.delta-negative { color: #808080 !important; font-weight: bold; }
+.delta-zero { color: #808080; }
+
+/* ---- Buttons ---- */
+.cf-btn {
+    display: inline-block;
+    background: #f0f0f0;
+    border: 1px solid var(--border-color);
+    padding: 3px 10px;
+    font-family: verdana, arial, sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    color: #000;
+    border-radius: 3px;
+    text-decoration: none;
+}
+
+.cf-btn:hover {
+    background: #e1e1e1;
+    text-decoration: none;
+}
+
+.cf-btn:active {
+    background: #d8d8d8;
+}
+
+.cf-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ---- Inputs ---- */
+.cf-input {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+    font-family: verdana, arial, sans-serif;
+    font-size: 12px;
+    border-radius: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cf-input:focus {
+    border-color: #1a5cc8;
+    outline: none;
+}
+
+select.cf-input {
+    width: 100%;
+    padding: 3px;
+    box-sizing: border-box;
+}
+
+/* ---- Settings (filter form pattern) ---- */
+.setting-name {
+    font-weight: bold;
+    font-size: 11px;
+    color: var(--muted-color);
+    margin-bottom: 2px;
+    padding: 3px 0 3px 0.5em;
+}
+
+.setting-value {
+    padding: 4px 0.5em 5px 0.5em;
+    font-size: 12px;
+}
+
+.setting-row-bottom {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+/* ---- Filter (CF style filter form) ---- */
+.filter-box {
+    position: relative;
+    height: 2em;
+    margin: 0.25em 0;
+}
+
+.filter-box input {
+    background: #f4f4f4 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="7" cy="7" r="5" stroke="%23666" fill="none"/><line x1="12" y1="12" x2="15" y2="15" stroke="%23666"/></svg>') 2px 2px no-repeat;
+    border: 1px solid #d4d4d4;
+    height: 1.2em;
+    line-height: 1em;
+    position: absolute;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    padding: 1px 1px 1px 18px;
+    right: 0;
+}
+
+/* ---- Pagination (exact CF style) ---- */
+.pagination {
+    margin: 0 auto;
+    font-size: 12px;
+}
+
+.pagination ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: inline-block;
+}
+
+.pagination li {
+    display: inline;
+    margin: 0;
+}
+
+.pagination .page-index {
+    padding: 0.25em;
+}
+
+.pagination .page-index a,
+.pagination .page-index span {
+    display: inline-block;
+    padding: 0.25em;
+    border: 1px solid #ccc;
+    color: #1a5cc8;
+    background: #fff;
+    text-decoration: none;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.pagination .page-index a:hover {
+    background: #f0f0f0;
+    text-decoration: none;
+}
+
+.pagination .page-index.active span {
+    border-color: #1a5cc8;
+    background: #e1e1e1;
+    color: #000;
+    font-weight: bold;
+}
+
+.pagination .arrow {
+    font-size: 2em;
+    color: #000;
+    border: 1px solid #ccc;
+    background: #fff;
+    padding: 0 4px;
+    border-radius: 3px;
+}
+
+.pagination .arrow.a {
+    margin-right: 0.3em;
+}
+
+.pagination .arrow.inactive {
+    color: #ccc;
+}
+
+.pagination .page-count {
+    color: var(--muted-color);
+    font-size: 11px;
+    margin: 0 0.5em;
+}
+
+/* ---- Stat Widget ---- */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px dotted #e0e0e0;
+    font-size: 12px;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: var(--muted-color);
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #000;
+}
+
+/* ---- Graph Container ---- */
+.standings-graph {
+    margin-bottom: 1.5em;
+}
+
+/* ---- Notice / Error / Loading ---- */
+.notice {
+    padding: 8px 12px;
+    border: 1px solid #d0d8e0;
+    background: #f0f4fa;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #555;
+    border-radius: 4px;
+}
+
+.error-notice {
+    padding: 8px 12px;
+    border: 1px solid #e8b0b0;
+    background: #fff5f5;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #cc0000;
+    border-radius: 4px;
+}
+
+/* ---- Section Title (CF style) ---- */
+.section-title,
+.caption {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--menu-blue);
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    margin-top: 8px;
+}
+
+/* ---- Back link ---- */
+.back-link {
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+/* ---- CF verdict & user tags ---- */
+.rated-user {
+    font-family: "helvetica neue", Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    font-size: 14px;
+}
+.rated-user:hover {
+    text-decoration: none;
+}
+.verdict-ac { color: #008000; font-weight: bold; font-size: 12px; }
+.user-violet { color: #a0a !important; font-weight: bold; }
+.verdict-fail { color: #999; font-size: 12px; }
+
+/* ---- Text labels (CF style) ---- */
+.text-label {
+    display: inline-block;
+    border-radius: 0.25em;
+    padding: 0.1em 0.45em;
+    font-size: 85%;
+    font-weight: bold;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.text-label-blue { background-color: var(--highlighted-blue-color); color: #445f9d; }
+.text-label-green { background-color: #e8f5e9; color: #008000; }
+.text-label-yellow { background-color: #fff3dc; color: #ff8c00; }
+.text-label-red { background-color: #ffefef; color: #bb2024; }
+.text-label-gray { background-color: #efefef; color: var(--muted-color); }
+
+/* ---- Detail Table ---- */
+.detail-table {
+    width: auto;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+
+.detail-table td {
+    padding: 3px 12px 3px 0;
+    font-size: 12px;
+    vertical-align: top;
+    border: none;
+}
+
+.detail-table .label-col {
+    font-weight: bold;
+    color: var(--muted-color);
+    white-space: nowrap;
+    padding-right: 20px;
+}
+
+/* ---- Red link (CF uses for register links) ---- */
+.red-link {
+    color: #cc0000 !important;
+}
+
+/* ---- Footer ---- */
+#footer {
+    margin-top: 1em;
+    padding-top: 1em;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    font-size: 11px;
+    color: var(--notice-color);
+    clear: both;
+}
+
+.footer-logo-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60px;
+    text-align: center;
+}
+
+.footer-logo-link {
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 10px;
+    color: black !important;
+}
+
+.footer-logo-div a,
+.footer-logo-div .sep {
+    margin: 0 5px;
+}
+
+.footer-logo-div img,
+.footer-logo-div .sep {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.footer-logo-div .sep {
+    width: 4px;
+    border-left: 4px solid var(--border-color);
+    height: 50px;
+    margin-right: 22px;
+}
+
+#footer a { color: #1a5cc8; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1024px) {
+    .menu-list-container .search {
+        display: none;
+    }
+    .menu-list li a {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 900px) {
+    #sidebar { float: none; width: 100%; display: block; margin: 0 0 1em 0; }
+    .content-with-sidebar { margin-right: 0 !important; }
+}
