@@ -28,16 +28,6 @@ Your final rank is determined by comparing your total points and penalty against
 
 $$\text{Simulated Rank} = 1 + \text{Count of official contestants who beat your score}$$
 
-In code:
-```javascript
-let rank = 1;
-for (const contestant of officialContestants) {
-  if (contestant.points > myPoints || (contestant.points === myPoints && contestant.penalty < myPenalty)) {
-    rank++;
-  }
-}
-```
-
 ---
 
 ## 2. Expected Rank Model ($\text{Seed}$)
