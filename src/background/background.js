@@ -1,11 +1,13 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'HANDLE_DETECTED') {
-    chrome.storage.local.set({ cf_handle: message.handle }, () => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ success: false, error: chrome.runtime.lastError });
-      } else {
+    const authHandle = message.handle || null;
+    chrome.storage.local.set({ cf_auth_handle: authHandle }, () => {
+      chrome.storage.local.get(['cf_handle'], (result) => {
+        if (!result.cf_handle && authHandle) {
+          chrome.storage.local.set({ cf_handle: authHandle });
+        }
         sendResponse({ success: true });
-      }
+      });
     });
     return true; // Keep channel open for async response
   }

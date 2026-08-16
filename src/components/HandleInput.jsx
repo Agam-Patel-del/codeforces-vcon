@@ -17,7 +17,7 @@ function HandleInput({ handle, onLoad, loading }) {
   return (
     <div className="roundbox borderTopRound borderBottomRound">
       <div className="caption titled">
-        &rarr; Virtual Contests
+        &rarr; Contests History
         <div className="top-links"></div>
       </div>
       <div className="roundbox-content">

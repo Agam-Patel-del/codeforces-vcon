@@ -1,39 +1,83 @@
 # Codeforces-Vcon
 
-**Codeforces-Vcon** is a Chrome extension designed to seamlessly integrate a dedicated "Virtual Contests" interface directly into Codeforces. It allows competitive programmers to effortlessly track, filter, and visualize their performance in virtual contests with an authentic, pixel-perfect Codeforces UI.
+**Codeforces-Vcon** is a Chrome extension that integrates a dedicated virtual contest history and performance analytics interface directly into Codeforces. It enables competitive programmers to track, analyze, and visualize their performance across virtual and unrated practice contests with an authentic user interface.
+
+---
 
 ## Features
 
-* **Authentic Codeforces UI:** The extension injects a highly polished interface that perfectly mimics Codeforces' native CSS. From the `Cuprum` navigation font to the precise navbar spacing and colored user handles, it feels like an official Codeforces feature.
-* **Smart Contest Filtering:** Easily toggle your contest history between **Virtuals**, **Official**, or **All** contests. 
-* **Dynamic Performance Graph:** Visualizes your rating and performance trends over time. The graph instantly updates based on your active filter (defaulting to Virtuals).
-* **Multi-Account Support & Caching:** Want to track a friend's progress? The extension manages an LRU (Least Recently Used) cache of up to 25 different user handles. Your primary handle acts as a protected "VIP" and will never be pushed out of the cache.
-* **Fast & Responsive:** Built with React and bundled via Vite, the extension is heavily optimized for speed, leveraging cached API data so you aren't constantly waiting for network requests.
+* **Authentic Codeforces Interface:**
+  * Injects a seamless `VIRTUALS` navigation tab into the Codeforces top navbar.
+  * Built using native Codeforces typography, color palettes, tables, and roundbox containers for a pixel-perfect, native experience.
+
+* **Simulated Live Rank:**
+  * Evaluates your virtual submission timestamps, points, and attempt penalties, slotting your score directly into the **official live standings** among all contestants.
+
+* **Performance Rating & Delta Engine:**
+  * **Performance Rating ($R_{\text{perf}}$):** Determines the exact rating level at which you competed in each round (the rating where $\Delta = 0$).
+  * **Rating Delta ($\Delta$):** Computes projected rating gains/losses using the official Elo win-probability formula with binary search seeds and multi-tier deflation adjustments.
+  * *(For full mathematical formulas and derivation, see [CALCULATIONS.md](CALCULATIONS.md).)*
+
+* **Interactive Performance Graph:**
+  * Visualizes your performance rating progression over time.
+  * Features interactive contest dots with detailed 3rd-quadrant cards showing Contest Title, Date, Rank, Problems Solved, Performance Rating, and Projected Delta ($\Delta$).
+
+* **Sidebar Statistics & Trend Analysis:**
+  * **Peak Performance:** Highest performance rating achieved, displayed with official Codeforces rank colors and titles (e.g. *Candidate Master*, *Expert*).
+  * **Last 5 Contests Average Performance & Rank:** Arithmetic mean of your 5 most recent contests with real-time trend indicators (`↗` / `↘`) comparing your recent form against your all-time historical baseline.
+
+* **Progressive Page-Based Loading:**
+  * Discovers all virtual participations and renders the table in under half a second.
+  * Prioritizes rank and rating calculations for the currently visible page first, while background workers enrich remaining history without blocking user interaction.
+
+* **Contest Problem Breakdown:**
+  * Detailed per-problem diagnostics showing solve times, wrong attempt penalties, and post-contest upsolve tracking.
+
+* **Smart Filtering & Multi-Handle LRU Cache:**
+  * Filter contests by Participation Type (*All*, *Virtual Only*, *Unrated Live Only*), Division (*Div. 1*, *Div. 2*, *Div. 3*, *Div. 4*, *Educational*, *Global*), Problems Solved, and Sort Order.
+  * Multi-handle LRU cache supporting up to 25 accounts with permanent protection for your primary handle.
+
+---
 
 ## Installation
 
-Since this is a Chrome Extension, you can load it directly into your browser:
+### Load Unpacked Extension in Chrome:
 
-1. Clone or download this repository to your local machine.
-2. If you are developing or pulling from source, build the extension using `npm install` and then `npm run build` (or `npx vite build`). The built files will be output to the `dist` folder.
-3. Open Google Chrome and navigate to `chrome://extensions/`.
-4. Enable **Developer mode** (toggle switch in the top right corner).
-5. Click **Load unpacked** and select the built `dist` folder from this repository.
-6. The extension is now installed! Navigate to Codeforces and you will see the new "VIRTUALS" tab in the main navigation menu.
+1. Clone or download this repository:
+   ```bash
+   git clone https://github.com/Agam-Patel-del/codeforces-vcon.git
+   cd codeforces-vcon
+   ```
+2. Install dependencies and build the extension:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. Open Google Chrome and navigate to:
+   ```text
+   chrome://extensions/
+   ```
+4. Enable **Developer mode** (toggle in the top-right corner).
+5. Click **Load unpacked** and select the built `dist` folder.
+6. Open [Codeforces](https://codeforces.com/) to access the new **VIRTUALS** tab.
+
+---
+
+## Mathematical Specification
+
+For a complete breakdown of scoring rules, seed evaluations, binary search root finding, and multi-tier rating adjustments, refer to **[CALCULATIONS.md](CALCULATIONS.md)**.
+
+---
 
 ## Tech Stack
 
-* **Frontend:** React, JSX
-* **Styling:** Vanilla CSS (Strictly adheres to standard Codeforces styling rules and absolute `px` units for cross-context stability).
+* **Frontend:** React 18, JSX
 * **Build Tool:** Vite
+* **Styling:** Vanilla CSS (Authentic Codeforces design system)
+* **API:** Official Codeforces REST API
 
-## Usage
-
-1. Open [Codeforces](https://codeforces.com/).
-2. Look for the **VIRTUALS** tab in the top navigation bar (right next to "CONTESTS").
-3. Click it to view your virtual contest history.
-4. Use the built-in search/input bar to quickly switch to another user's handle and see their stats!
+---
 
 ## License
 
-This project is open-source and free to use.
+This project is open source and available under the [MIT License](LICENSE).

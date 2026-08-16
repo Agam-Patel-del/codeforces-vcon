@@ -1,7 +1,7 @@
 import React from 'react';
 import VirtualContestRow from './VirtualContestRow.jsx';
 
-function VirtualContestTable({ contests, sort, handle, onSortChange, onContestClick, totalContests }) {
+function VirtualContestTable({ contests, sort, handle, onSortChange, onContestClick, totalContests, typeFilter = 'all' }) {
   const getSortIndicator = (currentSortType) => {
     if (sort === currentSortType) return ' \u25B2';
     const reverseMap = {
@@ -43,6 +43,20 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
     return cls;
   };
 
+  const getTableTitle = () => {
+    switch (typeFilter) {
+      case 'virtual': return 'Virtual Contests History';
+      case 'unrated': return 'Unrated Contests History';
+      default: return 'Virtual & Unrated Contests History';
+    }
+  };
+
+  const getDateColumnLabel = () => {
+    if (typeFilter === 'virtual') return 'Virtual Date';
+    if (typeFilter === 'unrated') return 'Contest Date';
+    return 'Participation Date';
+  };
+
   return (
     <div className="datatable">
       <div className="lt">&nbsp;</div>
@@ -51,7 +65,7 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
       <div className="rb">&nbsp;</div>
 
       <div className="datatable-caption">
-        <span className="title">&rarr; Virtual Contest History</span>
+        <span className="title">&rarr; {getTableTitle()}</span>
         <span className="row-count">{totalContests} &times;</span>
         <div className="filter-control">
           <span style={{ padding: '0', position: 'relative', bottom: '2px' }}>
@@ -87,10 +101,10 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
               <th className="top" style={{ width: '85px' }}>Contest Date</th>
               <th
                 className={`top ${getHeaderClass('newest')}`}
-                style={{ width: '85px' }}
+                style={{ width: '95px' }}
                 onClick={() => handleHeaderClick(sort === 'newest' ? 'oldest' : 'newest')}
               >
-                Virtual Date{getSortIndicator('newest') || getSortIndicator('oldest')}
+                {getDateColumnLabel()}{getSortIndicator('newest') || getSortIndicator('oldest')}
               </th>
               <th
                 className={`top ${getHeaderClass('best-rank')}`}
@@ -126,7 +140,7 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
             ))}
             {contests.length === 0 && (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No virtual contests match your filters</td>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No contests match your filters</td>
               </tr>
             )}
           </tbody>

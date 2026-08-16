@@ -1,6 +1,17 @@
 import React from 'react';
 
-function ContestFilters({ filter, typeFilter, sort, search, solvedFilter, onFilterChange, onTypeFilterChange, onSortChange, onSearchChange, onSolvedFilterChange }) {
+function ContestFilters({
+  typeFilter,
+  filter,
+  sort,
+  search,
+  solvedFilter,
+  onTypeFilterChange,
+  onFilterChange,
+  onSortChange,
+  onSearchChange,
+  onSolvedFilterChange
+}) {
   const divisionFilters = ['all', 'div1', 'div2', 'div3', 'div4', 'educational', 'global', 'other'];
   const solvedFilters = ['all', '0-2', '3-4', '5+'];
 
@@ -36,9 +47,9 @@ function ContestFilters({ filter, typeFilter, sort, search, solvedFilter, onFilt
             onChange={(e) => onTypeFilterChange(e.target.value)}
             style={{ maxWidth: '17em' }}
           >
-            <option value="virtual">Virtual</option>
-            <option value="official">Official</option>
-            <option value="all">All</option>
+            <option value="all">All (Virtual & Unrated)</option>
+            <option value="virtual">Virtual Only</option>
+            <option value="unrated">Unrated (Live) Only</option>
           </select>
         </div>
 
@@ -55,6 +66,23 @@ function ContestFilters({ filter, typeFilter, sort, search, solvedFilter, onFilt
           >
             {divisionFilters.map(d => (
               <option key={d} value={d}>{getDivLabel(d)}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="setting-name">
+          <label htmlFor="filter-solved">Solved:</label>
+        </div>
+        <div className="setting-value">
+          <select
+            id="filter-solved"
+            className="cf-input"
+            value={solvedFilter}
+            onChange={(e) => onSolvedFilterChange(e.target.value)}
+            style={{ maxWidth: '17em' }}
+          >
+            {solvedFilters.map(s => (
+              <option key={s} value={s}>{s === 'all' ? 'Any' : `${s} problems`}</option>
             ))}
           </select>
         </div>
@@ -78,23 +106,6 @@ function ContestFilters({ filter, typeFilter, sort, search, solvedFilter, onFilt
             <option value="least-solved">Least Solved</option>
             <option value="highest-delta">Highest &Delta;</option>
             <option value="lowest-delta">Lowest &Delta;</option>
-          </select>
-        </div>
-
-        <div className="setting-name">
-          <label htmlFor="filter-solved">Solved:</label>
-        </div>
-        <div className="setting-value">
-          <select
-            id="filter-solved"
-            className="cf-input"
-            value={solvedFilter}
-            onChange={(e) => onSolvedFilterChange(e.target.value)}
-            style={{ maxWidth: '17em' }}
-          >
-            {solvedFilters.map(s => (
-              <option key={s} value={s}>{s === 'all' ? 'Any' : s + ' problems'}</option>
-            ))}
           </select>
         </div>
 

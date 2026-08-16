@@ -44,9 +44,9 @@
       newA.textContent = 'Virtuals';
       newA.target = '_blank';
       
-      // Copy styles to match
-      newA.className = contestsLink.className;
-      newLi.className = parentLi.className;
+      // Copy base classes while ensuring active states (like 'current') are not inherited
+      newA.className = contestsLink.className ? contestsLink.className.replace(/\bcurrent\b/g, '').trim() : '';
+      newLi.className = parentLi.className ? parentLi.className.replace(/\bcurrent\b/g, '').trim() : '';
       
       newLi.appendChild(newA);
       parentLi.parentNode.insertBefore(newLi, parentLi.nextSibling);
@@ -56,7 +56,7 @@
   }
   
   function sendHandleToBackground(handle) {
-    if (handle && chrome && chrome.runtime && chrome.runtime.sendMessage) {
+    if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
       chrome.runtime.sendMessage({ type: 'HANDLE_DETECTED', handle: handle }).catch(() => {
         // Ignore connection errors if background is not listening
       });
@@ -66,9 +66,7 @@
   function init() {
     insertNavItem();
     const handle = detectHandle();
-    if (handle) {
-      sendHandleToBackground(handle);
-    }
+    sendHandleToBackground(handle);
   }
   
   if (document.readyState === 'loading') {

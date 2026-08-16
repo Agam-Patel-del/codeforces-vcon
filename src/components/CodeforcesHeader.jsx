@@ -1,57 +1,100 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAuthHandle } from '../services/storageService.js';
 
 function CodeforcesHeader({ handle }) {
+  const [authHandle, setAuthHandle] = useState(null);
+
+  useEffect(() => {
+    const loadAuthHandle = async () => {
+      const h = await getAuthHandle();
+      setAuthHandle(h || null);
+    };
+    loadAuthHandle();
+
+    const listener = (changes, areaName) => {
+      if (areaName === 'local' && changes.cf_auth_handle) {
+        setAuthHandle(changes.cf_auth_handle.newValue || null);
+      }
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener(listener);
+      return () => chrome.storage.onChanged.removeListener(listener);
+    }
+  }, []);
+
   return (
-    <div id="header">
-      <div style={{ float: 'left', maxHeight: '60px' }}>
-        <a href="https://codeforces.com/" className="logo-href">
-          <img
-            height="65"
-            style={{ height: '65px' }}
-            alt="Codeforces"
-            title="Codeforces"
-            src="https://codeforces.org/s/12684/images/codeforces-sponsored-by-ton.png"
-          />
-        </a>
-      </div>
-      <div className="lang-chooser">
-        <div style={{ textAlign: 'right', marginBottom: '4px' }}>
-          <a href="https://codeforces.com/notifications" style={{ textDecoration: 'none' }}>
-            <img src="https://codeforces.org/s/12684/images/icons/bell.png" alt="Notifications" title="Notifications" style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+    <>
+      <div id="header" style={{ position: 'relative' }}>
+        <div style={{ float: 'left', maxHeight: '60px' }}>
+          <a href="https://codeforces.com/" className="logo-href">
+            <img
+              height="65"
+              style={{ height: '65px' }}
+              alt="Codeforces"
+              title="Codeforces"
+              src="https://codeforces.org/s/11564/images/codeforces-sponsored-by-ton.png"
+            />
           </a>
-          <span style={{ margin: '0 4px', color: '#000', fontSize: '13px' }}>|</span>
-          <a href="?locale=en"><img src="https://codeforces.org/s/12684/images/flags/24/gb.png" alt="In English" title="In English" style={{ verticalAlign: 'middle', margin: '0 2px' }} /></a>
-          <a href="?locale=ru"><img src="https://codeforces.org/s/12684/images/flags/24/ru.png" alt="По-русски" title="По-русски" style={{ verticalAlign: 'middle', margin: '0 2px' }} /></a>
         </div>
-        <div style={{ textAlign: 'right', fontSize: '13px' }}>
-          {handle ? (
-            <>
-              <a href={`https://codeforces.com/profile/${handle}`} className="rated-user user-violet">{handle}</a>
-              <span style={{ margin: '0 4px', color: '#000' }}>|</span>
-              <a href="https://codeforces.com/logout">Logout</a>
-            </>
-          ) : (
-            <>
-              <a href="https://codeforces.com/enter?back=%2F">Enter</a>
-              {' | '}
-              <a href="https://codeforces.com/register">Register</a>
-            </>
-          )}
+        <div className="lang-chooser">
+          <div style={{ textAlign: 'right' }}>
+            <a href="https://codeforces.com/notifications" title="Notifications">
+              <img
+                src="https://codeforces.org/s/0/images/icons/bell.png"
+                title="Notifications"
+                alt="Notifications"
+              />
+            </a>
+            {' | '}
+            <a href="https://codeforces.com/?locale=en">
+              <img
+                src="https://codeforces.org/s/0/images/flags/24/gb.png"
+                title="In English"
+                alt="In English"
+              />
+            </a>
+            <a href="https://codeforces.com/?locale=ru">
+              <img
+                src="https://codeforces.org/s/0/images/flags/24/ru.png"
+                title="По-русски"
+                alt="По-русски"
+              />
+            </a>
+          </div>
+          <div>
+            {authHandle ? (
+              <>
+                <a
+                  href={`https://codeforces.com/profile/${authHandle}`}
+                  className="rated-user user-violet"
+                  style={{ fontWeight: 'normal', textDecoration: 'underline' }}
+                >
+                  {authHandle}
+                </a>
+                {' | '}
+                <a href="https://codeforces.com/logout" style={{ textDecoration: 'underline' }}>Logout</a>
+              </>
+            ) : (
+              <>
+                <a href="https://codeforces.com/enter?back=%2F" style={{ textDecoration: 'underline' }}>Enter</a>
+                {' | '}
+                <a href="https://codeforces.com/register" style={{ textDecoration: 'underline' }}>Register</a>
+              </>
+            )}
+          </div>
         </div>
+        <br style={{ clear: 'both' }} />
       </div>
-      <br style={{ clear: 'both' }} />
 
       <div className="roundbox menu-box borderTopRound borderBottomRound">
         <div className="menu-list-container">
-          <form method="post" action="https://codeforces.com/search">
-            <input className="search" name="query" data-isPlaceholder="true" defaultValue="" placeholder="Search..." />
-          </form>
           <ul className="menu-list main-menu-list">
             <li><a href="https://codeforces.com/">Home</a></li>
             <li><a href="https://codeforces.com/top">Top</a></li>
             <li><a href="https://codeforces.com/catalog">Catalog</a></li>
             <li><a href="https://codeforces.com/contests">Contests</a></li>
-            <li><a href="#/">Virtuals</a></li>
+            <li className={window.location.hash === '' || window.location.hash === '/' ? 'current' : ''}><a href="#/">Virtuals</a></li>
             <li><a href="https://codeforces.com/gyms">Gym</a></li>
             <li><a href="https://codeforces.com/problemset">Problemset</a></li>
             <li><a href="https://codeforces.com/groups">Groups</a></li>
@@ -61,10 +104,13 @@ function CodeforcesHeader({ handle }) {
             <li><a href="https://codeforces.com/calendar">Calendar</a></li>
             <li><a href="https://codeforces.com/help">Help</a></li>
           </ul>
+          <form method="post" action="https://codeforces.com/search">
+            <input className="search" name="query" data-isPlaceholder="true" defaultValue="" placeholder="Search..." />
+          </form>
           <br style={{ clear: 'both' }} />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

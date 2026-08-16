@@ -6,28 +6,26 @@ import { getVirtualContestKey, getContestUrl, getVirtualStandingsUrl, getContest
 async function discoverVirtualContests(handle) {
   const status = await api.getUserStatus(handle);
   
-  const strictVirtuals = status.filter(sub => sub.author.participantType === 'VIRTUAL');
+  const participations = status.filter(
+    sub => sub.author.participantType === 'VIRTUAL' || sub.author.participantType === 'OUT_OF_COMPETITION'
+  );
   
-  const officialSolves = {};
+  const allSolvedSet = new Set();
   for (const sub of status) {
-    if ((sub.author.participantType === 'CONTESTANT' || sub.author.participantType === 'OUT_OF_COMPETITION') && sub.verdict === 'OK') {
-      if (!officialSolves[sub.contestId]) officialSolves[sub.contestId] = new Set();
-      officialSolves[sub.contestId].add(sub.problem.index);
+    if (sub.verdict === 'OK' && sub.contestId && sub.problem && sub.problem.index) {
+      allSolvedSet.add(`${sub.contestId}_${sub.problem.index}`);
     }
   }
-  const solvesCount = {};
-  for (const cid in officialSolves) {
-    solvesCount[cid] = officialSolves[cid].size;
-  }
-  await storage.setCachedOfficialSolves(handle, solvesCount);
+  await storage.setCachedAllSolved(handle, Array.from(allSolvedSet));
 
   const groups = new Map();
-  for (const sub of strictVirtuals) {
+  for (const sub of participations) {
     const key = getVirtualContestKey(sub.contestId, sub.author.startTimeSeconds);
     if (!groups.has(key)) {
       groups.set(key, {
         contestId: sub.contestId,
         virtualStartTime: sub.author.startTimeSeconds,
+        participationType: sub.author.participantType === 'OUT_OF_COMPETITION' ? 'unrated' : 'virtual',
         submissions: []
       });
     }
@@ -37,13 +35,46 @@ async function discoverVirtualContests(handle) {
   return Array.from(groups.values());
 }
 
-async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap) {
-  const contestInfo = contestMap.get(contestId);
+function createQuickVirtualContest(v, contestMap, problemCounts) {
+  const contestInfo = contestMap ? contestMap.get(v.contestId) : null;
+  const okIndices = new Set(
+    (v.submissions || []).filter(s => s.verdict === 'OK').map(s => s.problem.index)
+  );
+
+  return {
+    contestId: v.contestId,
+    contestName: contestInfo ? contestInfo.name : `Contest ${v.contestId}`,
+    contestStartTime: contestInfo ? contestInfo.startTimeSeconds : 0,
+    contestDurationSeconds: contestInfo ? contestInfo.durationSeconds : 0,
+    virtualStartTime: v.virtualStartTime,
+    rank: null,
+    solvedCount: okIndices.size,
+    totalProblems: (problemCounts && problemCounts[v.contestId]) || '-',
+    upsolvedCount: 0,
+    solvedProblems: [],
+    unsolvedProblems: [],
+    ratingBefore: null,
+    predictedRatingDelta: null,
+    predictedRatingAfter: null,
+    performanceRating: null,
+    ratingConfidence: 'estimating',
+    contestType: contestInfo ? getContestType(contestInfo.name) : 'other',
+    participationType: v.participationType || 'virtual',
+    isOfficial: false,
+    isUnrated: v.participationType === 'unrated',
+    contestUrl: getContestUrl(v.contestId),
+    virtualStandingsUrl: getVirtualStandingsUrl(v.contestId),
+    submissions: v.submissions || [],
+    key: getVirtualContestKey(v.contestId, v.virtualStartTime),
+    isEnriched: false
+  };
+}
+
+async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap, participationType = 'virtual') {
+  const contestInfo = contestMap ? contestMap.get(contestId) : null;
   
   let standingsData = null;
   try {
-    // Codeforces blocked showUnofficial and handles for non-admins.
-    // Fetch official standings without extra parameters directly to save rate-limit time.
     standingsData = await api.getContestStandings(contestId);
   } catch (e) {
     standingsData = { rows: [], problems: [], contest: { type: 'CF' } };
@@ -51,18 +82,16 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
 
   let virtualRank = 0;
   let row = standingsData.rows.find(r => 
-    r.party.participantType === 'VIRTUAL' && 
+    (r.party.participantType === 'VIRTUAL' || r.party.participantType === 'OUT_OF_COMPETITION') && 
     (!r.party.startTimeSeconds || r.party.startTimeSeconds === virtualStartTime)
   );
 
-  // If CF blocked showUnofficial, row will be undefined. We must estimate rank!
   if (!row && standingsData.rows.length > 0) {
     let myPoints = 0;
     let myPenalty = 0;
     const contestType = standingsData.contest.type; // 'CF' or 'ICPC'
     
     standingsData.problems.forEach(p => {
-      // Find successful submission
       const okSub = submissions.find(s => s.verdict === 'OK' && s.problem.index === p.index);
       if (okSub) {
         const solveTimeSeconds = okSub.creationTimeSeconds - virtualStartTime;
@@ -80,17 +109,14 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
           myPoints += 1;
           myPenalty += solveTimeMinutes + 10 * wrongTries;
         } else {
-          // CF scoring: M - (M/250)*T - 50*W
           const maxPoints = p.points;
           let pts = maxPoints - (maxPoints / 250) * solveTimeMinutes - 50 * wrongTries;
           pts = Math.max(pts, maxPoints * 0.3);
-          // Round to integer, CF uses exact values but occasionally floats, we round
           myPoints += Math.round(pts);
         }
       }
     });
 
-    // Binary search or linear scan to find rank
     virtualRank = standingsData.rows.filter(r => {
       const isIcpc = contestType === 'ICPC' || standingsData.problems[0]?.points === undefined;
       if (isIcpc) {
@@ -110,7 +136,6 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
   let problemsList = standingsData.problems || [];
   
   if (problemsList.length === 0) {
-    // Fallback: extract unique problems from submissions if standings failed
     const seen = new Set();
     for (const s of submissions) {
       if (!seen.has(s.problem.index)) {
@@ -118,10 +143,12 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
         problemsList.push(s.problem);
       }
     }
-    // Sort problems by index
     problemsList.sort((a, b) => a.index.localeCompare(b.index));
   }
   
+  const allSolvedList = await storage.getCachedAllSolved(handle);
+  const allSolvedSet = new Set(allSolvedList || []);
+
   const solvedProblems = [];
   const unsolvedProblems = [];
 
@@ -149,13 +176,17 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
         s.passedTestCount > 0
       ).length;
       
+      const isUpsolved = allSolvedSet.has(`${contestId}_${p.index}`);
       unsolvedProblems.push({ 
         index: p.index, 
-        name: p.name,
-        wrongAttempts: wrongTries
+        name: p.name, 
+        wrongAttempts: wrongTries,
+        upsolved: isUpsolved
       });
     }
   }
+
+  const upsolvedCount = unsolvedProblems.filter(p => p.upsolved).length;
 
   const ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
   let predictedRatingDelta = 0;
@@ -180,6 +211,7 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
     rank: virtualRank,
     solvedCount: solvedProblems.length,
     totalProblems: problemsList.length,
+    upsolvedCount,
     solvedProblems,
     unsolvedProblems,
     ratingBefore,
@@ -188,11 +220,89 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
     performanceRating,
     ratingConfidence,
     contestType: contestInfo ? getContestType(contestInfo.name) : 'other',
+    participationType,
+    isOfficial: false,
+    isUnrated: participationType === 'unrated',
     contestUrl: getContestUrl(contestId),
     virtualStandingsUrl: getVirtualStandingsUrl(contestId),
     fetchedAt: Math.floor(Date.now() / 1000),
     key: getVirtualContestKey(contestId, virtualStartTime),
+    isEnriched: true
   };
+}
+
+/**
+ * Discovers virtual contests and merges with existing cache instantly (0.3s).
+ * Any contest not yet enriched is returned in lightweight format so the UI renders immediately.
+ */
+async function loadOrDiscoverContests(handle) {
+  const cachedData = await storage.getCachedVirtualContests(handle) || [];
+  const cachedMap = new Map(cachedData.map(c => [c.key, c]));
+
+  let contestList = await storage.getCachedContestList();
+  if (!contestList) {
+    try {
+      contestList = await api.getContestList();
+      await storage.setCachedContestList(contestList);
+    } catch (e) {
+      contestList = [];
+    }
+  }
+  const contestMap = new Map(contestList.map(c => [c.id, c]));
+  const problemCounts = await getContestProblemCountsMap();
+
+  const discovered = await discoverVirtualContests(handle);
+  
+  const merged = [];
+  let unenrichedCount = 0;
+
+  for (const v of discovered) {
+    const key = getVirtualContestKey(v.contestId, v.virtualStartTime);
+    const existing = cachedMap.get(key);
+
+    if (existing && existing.isEnriched !== false && existing.rank != null) {
+      merged.push(existing);
+    } else {
+      unenrichedCount++;
+      const quick = createQuickVirtualContest(v, contestMap, problemCounts);
+      merged.push(quick);
+    }
+  }
+
+  return {
+    contests: merged,
+    contestMap,
+    problemCounts,
+    unenrichedCount,
+    lastSync: await storage.getLastSyncTime() || Date.now()
+  };
+}
+
+/**
+ * Enriches a single contest on demand and incrementally caches it in storage.
+ */
+async function enrichSingleContest(handle, contestObj, contestMap) {
+  if (contestObj.isEnriched && contestObj.rank != null) {
+    return contestObj;
+  }
+
+  const enriched = await enrichVirtualContest(
+    contestObj.contestId,
+    contestObj.virtualStartTime,
+    contestObj.submissions || [],
+    handle,
+    contestMap,
+    contestObj.participationType
+  );
+
+  // Update storage incrementally
+  const cachedData = await storage.getCachedVirtualContests(handle) || [];
+  const updated = cachedData.filter(c => c.key !== enriched.key);
+  updated.push(enriched);
+  await storage.setCachedVirtualContests(handle, updated);
+  await storage.setLastSyncTime();
+
+  return enriched;
 }
 
 async function getAllVirtualContests(handle, { onProgress, forceRefresh = false } = {}) {
@@ -201,74 +311,42 @@ async function getAllVirtualContests(handle, { onProgress, forceRefresh = false 
     return { contests: cachedData, fromCache: true, lastSync: await storage.getLastSyncTime() };
   }
 
-  const virtuals = await discoverVirtualContests(handle);
-  
-  let contestList = await storage.getCachedContestList();
-  if (!contestList || forceRefresh) {
-    contestList = await api.getContestList();
-    await storage.setCachedContestList(contestList);
-  }
-
-  const contestMap = new Map(contestList.map(c => [c.id, c]));
-  
-  const enriched = [];
-  let current = 0;
-  for (const v of virtuals) {
-    if (onProgress) {
-      const cInfo = contestMap.get(v.contestId);
-      onProgress(current + 1, virtuals.length, cInfo ? cInfo.name : `Contest ${v.contestId}`);
-    }
-    const fullInfo = await enrichVirtualContest(v.contestId, v.virtualStartTime, v.submissions, handle, contestMap);
-    enriched.push(fullInfo);
-    current++;
-  }
-
-  await storage.setCachedVirtualContests(handle, enriched);
-  await storage.setLastSyncTime();
-
-  return { contests: enriched, fromCache: false, lastSync: await storage.getLastSyncTime() };
+  const result = await loadOrDiscoverContests(handle);
+  return { contests: result.contests, fromCache: false, lastSync: result.lastSync };
 }
 
 async function syncVirtualContests(handle, { onProgress } = {}) {
-  const cachedData = await storage.getCachedVirtualContests(handle) || [];
-  const cachedKeys = new Set(cachedData.map(c => c.key));
+  return getAllVirtualContests(handle, { onProgress, forceRefresh: false });
+}
 
-  const virtuals = await discoverVirtualContests(handle);
-  const newVirtuals = virtuals.filter(v => !cachedKeys.has(getVirtualContestKey(v.contestId, v.virtualStartTime)));
-
-  if (newVirtuals.length === 0) {
-    return { contests: cachedData, fromCache: true, lastSync: await storage.getLastSyncTime() };
-  }
-
-  let contestList = await storage.getCachedContestList();
-  if (!contestList) {
-    contestList = await api.getContestList();
-    await storage.setCachedContestList(contestList);
-  }
-  const contestMap = new Map(contestList.map(c => [c.id, c]));
-
-  const enriched = [];
-  let current = 0;
-  for (const v of newVirtuals) {
-    if (onProgress) {
-      const cInfo = contestMap.get(v.contestId);
-      onProgress(current + 1, newVirtuals.length, cInfo ? cInfo.name : `Contest ${v.contestId}`);
+async function getContestProblemCountsMap() {
+  let counts = await storage.getCachedContestProblemCounts();
+  if (!counts) {
+    try {
+      const data = await api.getProblemsetProblems();
+      if (data && data.problems && Array.isArray(data.problems)) {
+        counts = {};
+        for (const p of data.problems) {
+          if (p.contestId) {
+            counts[p.contestId] = (counts[p.contestId] || 0) + 1;
+          }
+        }
+        await storage.setCachedContestProblemCounts(counts);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch problemset problem counts:', e);
+      counts = {};
     }
-    const fullInfo = await enrichVirtualContest(v.contestId, v.virtualStartTime, v.submissions, handle, contestMap);
-    enriched.push(fullInfo);
-    current++;
   }
-
-  const allContests = [...cachedData, ...enriched];
-  await storage.setCachedVirtualContests(handle, allContests);
-  await storage.setLastSyncTime();
-
-  return { contests: allContests, fromCache: false, lastSync: await storage.getLastSyncTime() };
+  return counts || {};
 }
 
 export {
   discoverVirtualContests,
   enrichVirtualContest,
+  enrichSingleContest,
+  loadOrDiscoverContests,
   getAllVirtualContests,
-  syncVirtualContests
+  syncVirtualContests,
+  getContestProblemCountsMap
 };

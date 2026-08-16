@@ -1,46 +1,84 @@
 import React from 'react';
 
+function getPageList(currentPage, totalPages) {
+  if (totalPages <= 6) {
+    const list = [];
+    for (let i = 1; i <= totalPages; i++) list.push(i);
+    return list;
+  }
+
+  const set = new Set();
+  // Always include first 2 and last 2 pages
+  set.add(1);
+  set.add(2);
+  set.add(totalPages - 1);
+  set.add(totalPages);
+
+  // Include current page and immediate neighbors
+  set.add(currentPage);
+  if (currentPage > 1) set.add(currentPage - 1);
+  if (currentPage < totalPages) set.add(currentPage + 1);
+
+  // If at start, show extra neighbor
+  if (currentPage === 1 || currentPage === 2) set.add(3);
+
+  // If at end, show extra neighbor
+  if (currentPage === totalPages || currentPage === totalPages - 1) set.add(totalPages - 2);
+
+  const sorted = Array.from(set).filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+
+  const result = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] > sorted[i - 1] + 1) {
+      result.push('...');
+    }
+    result.push(sorted[i]);
+  }
+  return result;
+}
+
 function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
-  const pages = [];
-  const startPage = Math.max(1, currentPage - 3);
-  const endPage = Math.min(totalPages, currentPage + 3);
-
-  if (startPage > 1) {
-    pages.push(1);
-    if (startPage > 2) pages.push('...');
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(i);
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) pages.push('...');
-    pages.push(totalPages);
-  }
+  const pages = getPageList(currentPage, totalPages);
 
   return (
     <div className="pagination">
       <ul>
-        <li className={`arrow a ${currentPage === 1 ? 'inactive' : ''}`}>
+        <li className={`arrow ${currentPage === 1 ? 'inactive' : ''}`}>
           {currentPage === 1 ? (
-            <span>&#9664;</span>
+            <span>&larr;</span>
           ) : (
-            <a href="#/" onClick={(e) => { e.preventDefault(); onPageChange(currentPage - 1); }}>&#9664;</a>
+            <a
+              href="#/"
+              onClick={(e) => {
+                e.preventDefault();
+                onPageChange(currentPage - 1);
+              }}
+              title="Previous Page"
+            >
+              &larr;
+            </a>
           )}
         </li>
         {pages.map((p, idx) => (
           <React.Fragment key={idx}>
             {p === '...' ? (
-              <li><span className="page-index" style={{ border: 'none', background: 'transparent', color: '#888' }}>...</span></li>
+              <li className="page-ellipsis">...</li>
             ) : (
               <li className={`page-index ${currentPage === p ? 'active' : ''}`}>
                 {currentPage === p ? (
                   <span>{p}</span>
                 ) : (
-                  <a href="#/" onClick={(e) => { e.preventDefault(); onPageChange(p); }}>{p}</a>
+                  <a
+                    href="#/"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onPageChange(p);
+                    }}
+                  >
+                    {p}
+                  </a>
                 )}
               </li>
             )}
@@ -48,12 +86,20 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         ))}
         <li className={`arrow ${currentPage === totalPages ? 'inactive' : ''}`}>
           {currentPage === totalPages ? (
-            <span>&#9654;</span>
+            <span>&rarr;</span>
           ) : (
-            <a href="#/" onClick={(e) => { e.preventDefault(); onPageChange(currentPage + 1); }}>&#9654;</a>
+            <a
+              href="#/"
+              onClick={(e) => {
+                e.preventDefault();
+                onPageChange(currentPage + 1);
+              }}
+              title="Next Page"
+            >
+              &rarr;
+            </a>
           )}
         </li>
-        <li className="page-count">{currentPage} / {totalPages}</li>
       </ul>
     </div>
   );

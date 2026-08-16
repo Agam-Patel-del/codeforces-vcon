@@ -1,12 +1,16 @@
 const KEYS = {
   HANDLE: 'cf_handle',
+  AUTH_HANDLE: 'cf_auth_handle',
   CONTEST_LIST: 'cf_contest_list',
-  VIRTUAL_CONTESTS: 'cf_virtual_contests',
+  VIRTUAL_CONTESTS: 'cf_virtual_contests_v4',
   RATING_HISTORY: 'cf_rating_history',
   CONTEST_RATING_CHANGES: 'cf_rating_changes_v2', // Use new slim key
   LAST_SYNC: 'cf_last_sync',
   HANDLE_LRU: 'cf_handle_lru',
   OFFICIAL_SOLVES: 'cf_official_solves',
+  CONTEST_PROBLEM_COUNTS: 'cf_contest_problem_counts',
+  PERFORMANCE_RATINGS: 'cf_performance_ratings',
+  ALL_SOLVED: 'cf_all_solved'
 };
 
 const MAX_CACHED_HANDLES = 25;
@@ -204,9 +208,83 @@ async function clearCache() {
   });
 }
 
+async function detectAuthenticatedHandleFromCF() {
+  try {
+    const response = await fetch('https://codeforces.com/', { credentials: 'include' });
+    if (!response.ok) return null;
+    const html = await response.text();
+    const match = html.match(/href="\/profile\/([a-zA-Z0-9_.-]+)"/i);
+    if (match && match[1]) {
+      const handle = match[1].trim();
+      const lower = handle.toLowerCase();
+      if (lower !== 'enter' && lower !== 'register' && lower !== 'login') {
+        await set(KEYS.AUTH_HANDLE, handle);
+        return handle;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to detect authenticated handle from Codeforces:', e);
+  }
+  return null;
+}
+
+async function getAuthHandle() {
+  const cached = await get(KEYS.AUTH_HANDLE);
+  if (cached) return cached;
+
+  const detected = await detectAuthenticatedHandleFromCF();
+  if (detected) return detected;
+
+  const primary = await getHandle();
+  return primary || null;
+}
+
+async function setAuthHandle(handle) {
+  return set(KEYS.AUTH_HANDLE, handle);
+}
+
+async function getCachedContestProblemCounts() {
+  return get(KEYS.CONTEST_PROBLEM_COUNTS);
+}
+
+async function setCachedContestProblemCounts(counts) {
+  return set(KEYS.CONTEST_PROBLEM_COUNTS, counts);
+}
+
+async function getCachedPerformanceRatingMap() {
+  return (await get(KEYS.PERFORMANCE_RATINGS)) || {};
+}
+
+async function getCachedPerformanceRating(contestId, rank) {
+  const map = await getCachedPerformanceRatingMap();
+  const key = `${contestId}_${rank}`;
+  return map[key];
+}
+
+async function setCachedPerformanceRating(contestId, rank, perf) {
+  const map = await getCachedPerformanceRatingMap();
+  const key = `${contestId}_${rank}`;
+  map[key] = perf;
+  return set(KEYS.PERFORMANCE_RATINGS, map);
+}
+
+async function getCachedAllSolved(handle) {
+  if (handle) await updateLRU(handle);
+  const data = await get(KEYS.ALL_SOLVED) || {};
+  return data[handle] || [];
+}
+
+async function setCachedAllSolved(handle, solvedList) {
+  const allData = await get(KEYS.ALL_SOLVED) || {};
+  allData[handle] = solvedList;
+  return set(KEYS.ALL_SOLVED, allData);
+}
+
 export {
   getHandle,
   setHandle,
+  getAuthHandle,
+  setAuthHandle,
   getCachedContestList,
   setCachedContestList,
   getCachedVirtualContests,
@@ -217,6 +295,13 @@ export {
   setCachedContestRatingChanges,
   getCachedOfficialSolves,
   setCachedOfficialSolves,
+  getCachedContestProblemCounts,
+  setCachedContestProblemCounts,
+  getCachedPerformanceRatingMap,
+  getCachedPerformanceRating,
+  setCachedPerformanceRating,
+  getCachedAllSolved,
+  setCachedAllSolved,
   getLastSyncTime,
   setLastSyncTime,
   clearCache

@@ -1,5 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { formatDate } from '../utils/dates.js';
+import { getRatingColorClass, formatDelta, getDeltaClass } from '../utils/rating.js';
+import { getContestUrl } from '../utils/contest.js';
 
 const getRatingColor = (rating) => {
   if (!rating || rating < 1200) return '#cccccc';
@@ -16,11 +18,18 @@ function PerformanceGraph({ contests }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const [showGraph, setShowGraph] = useState(true);
-  const [hoverData, setHoverData] = useState(null);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [pinnedPoint, setPinnedPoint] = useState(null);
+  const hideTimerRef = useRef(null);
+  const pointsRef = useRef([]);
 
-  const dataPoints = contests
-    .filter(c => c.performanceRating != null)
-    .sort((a, b) => a.virtualStartTime - b.virtualStartTime);
+  const dataPoints = useMemo(() => {
+    return (contests || [])
+      .filter(c => c.performanceRating != null && typeof c.performanceRating === 'number')
+      .sort((a, b) => (a.virtualStartTime || 0) - (b.virtualStartTime || 0));
+  }, [contests]);
+
+  const activePoint = pinnedPoint || hoveredPoint;
 
   useEffect(() => {
     if (!showGraph || dataPoints.length < 2 || !canvasRef.current || !containerRef.current) return;
@@ -28,10 +37,9 @@ function PerformanceGraph({ contests }) {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     
-    // Size canvas to its container width
     const containerWidth = container.clientWidth;
     const canvasWidth = containerWidth;
-    const canvasHeight = 180;
+    const canvasHeight = 280;
     
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
@@ -97,6 +105,8 @@ function PerformanceGraph({ contests }) {
       return { x, y, rating: d.performanceRating, contest: d };
     });
 
+    pointsRef.current = points;
+
     // Line
     ctx.strokeStyle = '#aaa';
     ctx.lineWidth = 1.5;
@@ -109,52 +119,150 @@ function PerformanceGraph({ contests }) {
 
     // Dots
     points.forEach((p) => {
+      const isHighlighted = activePoint && activePoint.contest.key === p.contest.key;
+      const radius = isHighlighted ? 6 : 4;
+
       ctx.fillStyle = getRatingColor(p.rating);
-      ctx.strokeStyle = '#666';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isHighlighted ? '#000000' : '#666666';
+      ctx.lineWidth = isHighlighted ? 2.5 : 1;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+      ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
       ctx.fill();
       ctx.stroke();
     });
 
-    const handleMouseMove = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+  }, [dataPoints, showGraph, activePoint]);
 
-      let hovered = null;
-      for (const p of points) {
-        if (Math.hypot(p.x - mouseX, p.y - mouseY) < 10) {
-          hovered = p;
-          break;
-        }
+  const findNearestPoint = (e) => {
+    if (!canvasRef.current || pointsRef.current.length === 0) return null;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    for (const p of pointsRef.current) {
+      if (Math.hypot(p.x - mouseX, p.y - mouseY) < 14) {
+        return p;
       }
-      setHoverData(hovered);
+    }
+    return null;
+  };
+
+  const handleMouseMove = (e) => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
+    const nearest = findNearestPoint(e);
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = nearest ? 'pointer' : 'default';
+    }
+
+    if (nearest) {
+      setHoveredPoint(nearest);
+    } else if (!pinnedPoint) {
+      // Small grace delay before clearing hover
+      hideTimerRef.current = setTimeout(() => {
+        setHoveredPoint(null);
+      }, 250);
+    }
+  };
+
+  const handleCanvasClick = (e) => {
+    const nearest = findNearestPoint(e);
+    if (nearest) {
+      setPinnedPoint(prev => (prev && prev.contest.key === nearest.contest.key ? null : nearest));
+      setHoveredPoint(nearest);
+    } else {
+      setPinnedPoint(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'default';
+    }
+    if (!pinnedPoint) {
+      hideTimerRef.current = setTimeout(() => {
+        setHoveredPoint(null);
+      }, 350);
+    }
+  };
+
+  const handleCardMouseEnter = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  const handleCardMouseLeave = () => {
+    if (!pinnedPoint) {
+      hideTimerRef.current = setTimeout(() => {
+        setHoveredPoint(null);
+      }, 300);
+    }
+  };
+
+  const handleCloseCard = (e) => {
+    e.stopPropagation();
+    setPinnedPoint(null);
+    setHoveredPoint(null);
+  };
+
+  const getCardStyle = () => {
+    if (!activePoint) return {};
+
+    const containerWidth = containerRef.current?.clientWidth || 500;
+    const cardWidth = 220;
+    const cardHeight = 145;
+
+    // 3rd Quadrant: Bottom-Left relative to dot origin (x < dot.x, y > dot.y in screen space)
+    let left = activePoint.x - cardWidth - 8;
+    let top = activePoint.y + 8;
+
+    // Boundary check for left edge: if dot is too close to left, flip horizontally or clamp
+    if (left < 8) {
+      if (activePoint.x + 8 + cardWidth <= containerWidth - 8) {
+        left = activePoint.x + 8;
+      } else {
+        left = 8;
+      }
+    }
+
+    // Boundary check for bottom edge: if dot is near bottom, shift upward
+    if (top + cardHeight > 285) {
+      top = Math.max(8, activePoint.y - cardHeight - 8);
+    }
+
+    return {
+      position: 'absolute',
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${cardWidth}px`,
+      background: '#ffffff',
+      border: '1px solid #b9b9b9',
+      borderRadius: '3px',
+      padding: '6px 10px',
+      fontSize: '11px',
+      lineHeight: '1.4',
+      boxShadow: '2px 2px 8px rgba(0,0,0,0.22)',
+      zIndex: 20,
+      color: '#333',
+      pointerEvents: 'auto'
     };
-
-    const handleMouseLeave = () => setHoverData(null);
-
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseleave', handleMouseLeave);
-    };
-
-  }, [dataPoints, showGraph]);
+  };
 
   if (dataPoints.length < 2) return null;
 
   return (
     <div className="roundbox borderTopRound borderBottomRound">
-      <div className="caption titled" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="caption titled" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '0.5em', paddingTop: '0.3em' }}>
         <span>{"\u2192"} Performance Graph</span>
         <button
           className="cf-btn"
           onClick={() => setShowGraph(!showGraph)}
-          style={{ padding: '1px 8px', fontSize: '1.1rem' }}
+          style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
         >
           {showGraph ? 'Hide' : 'Show'}
         </button>
@@ -165,23 +273,74 @@ function PerformanceGraph({ contests }) {
           <canvas 
             ref={canvasRef} 
             style={{ display: 'block', width: '100%' }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleCanvasClick}
           />
-          {hoverData && (
-            <div style={{
-              position: 'absolute',
-              left: Math.min(hoverData.x + 10, (containerRef.current?.clientWidth || 500) - 120),
-              top: hoverData.y - 20,
-              background: '#fff',
-              border: '1px solid #b9b9b9',
-              borderRadius: '3px',
-              padding: '3px 8px',
-              fontSize: '11px',
-              pointerEvents: 'none',
-              boxShadow: '1px 1px 3px rgba(0,0,0,0.15)',
-              zIndex: 10
-            }}>
-              {formatDate(hoverData.contest.virtualStartTime)}<br/>
-              Performance: <strong>{Math.round(hoverData.rating)}</strong>
+          {activePoint && (
+            <div 
+              style={getCardStyle()}
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #eee', paddingBottom: '3px', marginBottom: '4px' }}>
+                <a 
+                  href={getContestUrl(activePoint.contest.contestId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#1a5cc8', textDecoration: 'none', fontWeight: 'bold', fontSize: '11px', paddingRight: '8px' }}
+                >
+                  {activePoint.contest.contestName}
+                </a>
+                <button
+                  onClick={handleCloseCard}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#888',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    padding: '0 2px',
+                    lineHeight: '1'
+                  }}
+                  title="Close"
+                >
+                  &times;
+                </button>
+              </div>
+              <div style={{ color: '#777', fontSize: '10px', marginBottom: '5px' }}>
+                {formatDate(activePoint.contest.virtualStartTime)}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Rank:</span>
+                <strong>{activePoint.contest.rank ?? '-'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Solved:</span>
+                <strong>{activePoint.contest.solvedCount ?? 0} / {activePoint.contest.totalProblems ?? '?'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Performance:</span>
+                <span className={getRatingColorClass(activePoint.rating)} style={{ fontWeight: 'bold' }}>
+                  {Math.round(activePoint.rating)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span>Delta (&Delta;):</span>
+                <span className={getDeltaClass(activePoint.contest.predictedRatingDelta)} style={{ fontWeight: 'bold' }}>
+                  {activePoint.contest.predictedRatingDelta != null ? formatDelta(activePoint.contest.predictedRatingDelta) : '-'}
+                </span>
+              </div>
+              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '3px', textAlign: 'right' }}>
+                <a
+                  href={`#/contest/${activePoint.contest.contestId}/${activePoint.contest.virtualStartTime}`}
+                  style={{ color: '#1a5cc8', fontSize: '10px', textDecoration: 'none' }}
+                >
+                  View Details &rarr;
+                </a>
+              </div>
             </div>
           )}
         </div>

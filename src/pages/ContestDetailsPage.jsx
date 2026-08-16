@@ -6,6 +6,8 @@ import { formatDateTime, formatDuration } from '../utils/dates.js';
 import { getRatingColorClass, formatDelta, getDeltaClass } from '../utils/rating.js';
 import { getContestUrl, getProblemUrl, getVirtualStandingsUrl } from '../utils/contest.js';
 
+import { getPerformanceRating } from '../services/ratingService.js';
+
 function ContestDetailsPage({ contestId, virtualStartTime }) {
   const [handle, setHandle] = useState('');
   const [contest, setContest] = useState(null);
@@ -23,7 +25,17 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
             c.contestId.toString() === contestId.toString() &&
             c.virtualStartTime === virtualStartTime
           );
-          setContest(found || null);
+          if (found) {
+            let perf = found.performanceRating;
+            if (perf == null) {
+              try {
+                perf = await getPerformanceRating(found.contestId, found.rank, found.virtualStartTime);
+              } catch (e) {}
+            }
+            setContest({ ...found, performanceRating: perf });
+          } else {
+            setContest(null);
+          }
         }
       }
       setLoading(false);
@@ -59,7 +71,7 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
         <div id="content">
           <div className="notice" style={{ color: 'red' }}>Contest not found in cache.</div>
           <div style={{ marginTop: '1em' }}>
-            <a href="#/" className="back-link">&#8592; Back to Virtual Contests</a>
+            <a href="#/" className="back-link">&#8592; Back to Contests History</a>
           </div>
         </div>
         <div className="clear"></div>
@@ -163,7 +175,7 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
       <div id="content">
         <div className="caption" style={{ marginBottom: '0.5em' }}>
           <span style={{ fontSize: '1.4rem' }}>
-            <a href="#/" style={{ textDecoration: 'none', color: '#333' }}>Virtual Contests</a>
+            <a href="#/" style={{ textDecoration: 'none', color: '#333' }}>Contests History</a>
             {' \u2192 '}
             <a href={getContestUrl(contest.contestId)} target="_blank" rel="noopener noreferrer">
               {contest.contestName}
@@ -208,6 +220,9 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
                   if (p.solved) {
                     statusText = p.wrongAttempts > 0 ? `+${p.wrongAttempts}` : '+';
                     statusClass = 'verdict-ac';
+                  } else if (p.upsolved) {
+                    statusText = 'upsolved';
+                    statusClass = 'verdict-upsolved';
                   } else if (p.wrongAttempts > 0) {
                     statusText = `-${p.wrongAttempts}`;
                     statusClass = 'verdict-fail';
@@ -219,6 +234,8 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
                     const h = Math.floor(elapsedMinutes / 60);
                     const m = elapsedMinutes % 60;
                     timeText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                  } else if (p.upsolved) {
+                    timeText = 'Practice';
                   }
 
                   return (
@@ -257,7 +274,7 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
         </div>
 
         <div style={{ marginTop: '1em' }}>
-          <a href="#/" className="back-link">&#8592; Back to Virtual Contests</a>
+          <a href="#/" className="back-link">&#8592; Back to Contests History</a>
         </div>
       </div>
 

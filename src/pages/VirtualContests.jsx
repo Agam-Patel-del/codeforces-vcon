@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import CodeforcesHeader from '../components/CodeforcesHeader.jsx';
 import HandleInput from '../components/HandleInput.jsx';
 import ContestStats from '../components/ContestStats.jsx';
@@ -8,8 +8,15 @@ import VirtualContestTable from '../components/VirtualContestTable.jsx';
 import Pagination from '../components/Pagination.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ErrorState from '../components/ErrorState.jsx';
-import { getAllVirtualContests, syncVirtualContests } from '../services/virtualContestService.js';
-import { getHandle, getCachedVirtualContests, getCachedRatingHistory, getCachedOfficialSolves, setHandle as saveHandleToStorage } from '../services/storageService.js';
+import { 
+  loadOrDiscoverContests, 
+  enrichSingleContest 
+} from '../services/virtualContestService.js';
+import { 
+  getHandle, 
+  setHandle as saveHandleToStorage,
+  getLastSyncTime
+} from '../services/storageService.js';
 import { getContestType } from '../utils/contest.js';
 import { formatDateTime } from '../utils/dates.js';
 
@@ -24,92 +31,44 @@ function VirtualContests() {
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
 
-  const [typeFilter, setTypeFilter] = useState('virtual');
-  const [sort, setSort] = useState('newest');
+  const contestMapRef = useRef(new Map());
+
+  // Filters
+  const [typeFilter, setTypeFilter] = useState('all');
   const [filter, setFilter] = useState('all');
   const [solvedFilter, setSolvedFilter] = useState('all');
+  const [sort, setSort] = useState('newest');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Initialize handle, load cache, and sync in background
+  // Initialize handle and load instantly from storage/discovery
   useEffect(() => {
     const init = async () => {
       const storedHandle = await getHandle();
       if (storedHandle) {
         setHandleState(storedHandle);
-        
-        // 1. Instantly load from cache to populate the screen quickly
-        const cacheResult = await getAllVirtualContests(storedHandle, { forceRefresh: false });
-        if (cacheResult && cacheResult.contests) {
-          setContests(cacheResult.contests);
-          setLastSync(cacheResult.lastSync);
-        }
-        
-        // 2. Silently sync in the background to fetch any new contests
-        try {
-          const syncResult = await syncVirtualContests(storedHandle, { onProgress: () => {} });
-          if (syncResult && syncResult.contests) {
-            setContests(syncResult.contests);
-            setLastSync(syncResult.lastSync);
-          }
-        } catch (e) {
-          console.error("Background sync failed", e);
-        }
+        fetchData(storedHandle, false);
       }
     };
     init();
   }, []);
 
-  const fetchData = async (targetHandle, forceSync = false) => {
+  const fetchData = async (targetHandle, forceRefresh = false) => {
     if (!targetHandle) return;
     
     setLoading(true);
     setError(null);
-    setLoadingMessage('Loading virtual contests...');
+    setLoadingMessage('Discovering virtual contests...');
     setLoadingProgress({});
 
     try {
       await saveHandleToStorage(targetHandle);
       
-      const onProgress = (current, total, contestName) => {
-        setLoadingMessage(`Analyzing: ${contestName || 'contest'}...`);
-        setLoadingProgress({ current, total });
-      };
-
-      let result;
-      if (forceSync) {
-        result = await syncVirtualContests(targetHandle, { onProgress });
-      } else {
-        const cached = await getCachedVirtualContests(targetHandle);
-        result = { contests: cached || [], lastSync: Date.now() };
-      }
-      
-      const ratingHistory = await getCachedRatingHistory(targetHandle);
-      const officialSolves = await getCachedOfficialSolves(targetHandle) || {};
-      let mergedContests = [...(result.contests || [])];
-      
-      if (ratingHistory && Array.isArray(ratingHistory)) {
-        const officialContests = ratingHistory.map(r => ({
-          contestId: r.contestId,
-          contestName: r.contestName,
-          contestStartTime: r.ratingUpdateTimeSeconds,
-          virtualStartTime: r.ratingUpdateTimeSeconds,
-          rank: r.rank,
-          solvedCount: officialSolves[r.contestId] !== undefined ? officialSolves[r.contestId] : '-',
-          totalProblems: '-',
-          ratingBefore: r.oldRating,
-          predictedRatingDelta: r.newRating - r.oldRating,
-          predictedRatingAfter: r.newRating,
-          performanceRating: r.oldRating + 2 * (r.newRating - r.oldRating),
-          isOfficial: true
-        }));
-        mergedContests = [...mergedContests, ...officialContests];
-      }
-      
-      result.contests = mergedContests;
+      const result = await loadOrDiscoverContests(targetHandle);
+      contestMapRef.current = result.contestMap || new Map();
       
       setContests(result.contests || []);
-      setLastSync(result.lastSync || null);
+      setLastSync(result.lastSync || Date.now());
     } catch (err) {
       setError(err.message || 'An unknown error occurred');
     } finally {
@@ -118,6 +77,7 @@ function VirtualContests() {
   };
 
   const handleLoad = (newHandle) => {
+    if (!newHandle) return;
     setHandleState(newHandle);
     setContests([]);
     fetchData(newHandle, true);
@@ -125,36 +85,33 @@ function VirtualContests() {
 
   const handleRefresh = async () => {
     if (!handle) return;
-    
-    setLoading(true);
-    setError(null);
-    setLoadingMessage('Force refreshing all virtual contests...');
-    setLoadingProgress({});
-
-    try {
-      const onProgress = (current, total, contestName) => {
-        setLoadingMessage(`Analyzing: ${contestName || 'contest'}...`);
-        setLoadingProgress({ current, total });
-      };
-
-      const result = await getAllVirtualContests(handle, { onProgress, forceRefresh: true });
-      setContests(result.contests || []);
-      setLastSync(result.lastSync || null);
-    } catch (err) {
-      setError(err.message || 'An unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
+    fetchData(handle, true);
   };
 
   const allFilteredContests = useMemo(() => {
     return contests.filter(c => {
-      // Type filter
-      if (typeFilter === 'virtual' && c.isOfficial) return false;
-      if (typeFilter === 'official' && !c.isOfficial) return false;
+      // Participation type filter (virtual vs unrated)
+      const pType = c.participationType || (c.isUnrated ? 'unrated' : 'virtual');
+      if (typeFilter === 'virtual' && pType !== 'virtual') return false;
+      if (typeFilter === 'unrated' && pType !== 'unrated') return false;
 
+      // Division filter
+      if (filter !== 'all') {
+        const div = c.contestType || getContestType(c.contestName);
+        if (div !== filter) return false;
+      }
+
+      // Solved count filter
+      if (solvedFilter !== 'all') {
+        const solved = typeof c.solvedCount === 'number' ? c.solvedCount : (parseInt(c.solvedCount, 10) || 0);
+        if (solvedFilter === '0-2' && solved > 2) return false;
+        if (solvedFilter === '3-4' && (solved < 3 || solved > 4)) return false;
+        if (solvedFilter === '5+' && solved < 5) return false;
+      }
+
+      // Search term
       if (search) {
-        const term = search.toLowerCase();
+        const term = search.toLowerCase().trim();
         const cName = (c.contestName || '').toLowerCase();
         const cIdStr = (c.contestId || '').toString();
         if (!cName.includes(term) && !cIdStr.includes(term)) {
@@ -162,21 +119,9 @@ function VirtualContests() {
         }
       }
 
-      if (filter !== 'all') {
-        const type = getContestType(c.contestName);
-        if (type !== filter) return false;
-      }
-
-      if (solvedFilter !== 'all') {
-        const solved = c.solvedCount || 0;
-        if (solvedFilter === '0-2' && solved > 2) return false;
-        if (solvedFilter === '3-4' && (solved < 3 || solved > 4)) return false;
-        if (solvedFilter === '5+' && solved < 5) return false;
-      }
-
       return true;
     });
-  }, [contests, search, filter, solvedFilter, typeFilter]);
+  }, [contests, typeFilter, filter, solvedFilter, search]);
 
   const sortedContests = useMemo(() => {
     const list = [...allFilteredContests];
@@ -225,18 +170,71 @@ function VirtualContests() {
 
   const totalPages = Math.ceil(sortedContests.length / ITEMS_PER_PAGE);
 
+  // Progressive Enrichment: Prioritize visible page, then gentle background queue
+  useEffect(() => {
+    if (!handle || contests.length === 0) return;
+
+    let isMounted = true;
+
+    const runProgressiveEnrichment = async () => {
+      // 1. Priority 1: Enrich visible un-enriched contests on current page first
+      const visibleUnenriched = paginatedContests.filter(c => c.isEnriched === false || c.rank == null);
+      
+      for (const item of visibleUnenriched) {
+        if (!isMounted) break;
+        try {
+          const enriched = await enrichSingleContest(handle, item, contestMapRef.current);
+          if (isMounted && enriched) {
+            setContests(prev => prev.map(c => c.key === enriched.key ? enriched : c));
+          }
+        } catch (e) {
+          console.warn(`Failed to enrich contest ${item.contestId}:`, e);
+        }
+      }
+
+      // 2. Priority 2: Background worker for any remaining un-enriched contests
+      const remainingUnenriched = contests.filter(c => c.isEnriched === false || c.rank == null);
+      for (const item of remainingUnenriched) {
+        if (!isMounted) break;
+        // Don't process if already enriched in visible pass
+        if (item.isEnriched && item.rank != null) continue;
+        
+        try {
+          await new Promise(r => setTimeout(r, 200)); // Gentle rate-limit pause
+          if (!isMounted) break;
+          const enriched = await enrichSingleContest(handle, item, contestMapRef.current);
+          if (isMounted && enriched) {
+            setContests(prev => prev.map(c => c.key === enriched.key ? enriched : c));
+          }
+        } catch (e) {
+          console.warn(`Background enrichment error on contest ${item.contestId}:`, e);
+        }
+      }
+    };
+
+    runProgressiveEnrichment();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [paginatedContests, handle]);
+
   // Reset page to 1 if filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, typeFilter, sort, search, solvedFilter]);
+  }, [typeFilter, filter, solvedFilter, sort, search, handle]);
 
   const handleContestClick = useCallback((contest) => {
-    if (contest.isOfficial) {
-      window.open(`https://codeforces.com/contest/${contest.contestId}/my`, '_blank');
-    } else {
-      window.location.hash = `#/contest/${contest.contestId}/${contest.virtualStartTime}`;
-    }
+    window.location.hash = `#/contest/${contest.contestId}/${contest.virtualStartTime}`;
   }, []);
+
+  const getPageTitle = () => {
+    switch (typeFilter) {
+      case 'virtual': return 'Virtual Contests History';
+      case 'unrated': return 'Unrated Contests History';
+      default: return 'Virtual & Unrated Contests History';
+    }
+  };
 
   return (
     <>
@@ -249,23 +247,23 @@ function VirtualContests() {
           <>
             <ContestStats contests={allFilteredContests} />
             <ContestFilters
-              filter={filter}
               typeFilter={typeFilter}
+              filter={filter}
+              solvedFilter={solvedFilter}
               sort={sort}
               search={search}
-              solvedFilter={solvedFilter}
-              onFilterChange={setFilter}
               onTypeFilterChange={setTypeFilter}
+              onFilterChange={setFilter}
+              onSolvedFilterChange={setSolvedFilter}
               onSortChange={setSort}
               onSearchChange={setSearch}
-              onSolvedFilterChange={setSolvedFilter}
             />
           </>
         )}
       </div>
 
       <div id="content">
-        <div className="section-title">Virtual Contests{handle ? ` \u2014 ${handle}` : ''}</div>
+        <div className="section-title">{getPageTitle()}{handle ? ` \u2014 ${handle}` : ''}</div>
 
         {loading && (
           <LoadingState 
@@ -285,38 +283,41 @@ function VirtualContests() {
                contests={paginatedContests} 
                sort={sort} 
                handle={handle}
+               typeFilter={typeFilter}
                onSortChange={setSort}
                onContestClick={handleContestClick}
                totalContests={sortedContests.length}
              />
             
-            <Pagination 
-              currentPage={currentPage} 
-              totalPages={totalPages} 
-              onPageChange={setCurrentPage}
-              totalItems={sortedContests.length}
-              itemsPerPage={ITEMS_PER_PAGE}
-            />
-            
-            <div style={{ marginTop: '8px', textAlign: 'right', fontSize: '1.1rem', color: '#888' }}>
-              Last synced: {lastSync ? formatDateTime(Math.floor(lastSync / 1000)) : 'Never'}
-              {' '}
-              <button className="cf-btn" onClick={handleRefresh} style={{ marginLeft: '6px' }}>
-                Force Refresh
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap', gap: '8px' }}>
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={setCurrentPage}
+                totalItems={sortedContests.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+              />
+              
+              <div style={{ fontSize: '1.1rem', color: '#888' }}>
+                Last synced: {lastSync ? formatDateTime(Math.floor(lastSync / 1000)) : 'Never'}
+                {' '}
+                <button className="cf-btn" onClick={handleRefresh} style={{ marginLeft: '6px' }}>
+                  Force Refresh
+                </button>
+              </div>
             </div>
           </>
         )}
 
         {!loading && !error && handle && contests.length === 0 && (
           <div className="notice" style={{ marginTop: '15px' }}>
-            No virtual contests found for <strong>{handle}</strong>. Try entering a different handle.
+            No contests found for <strong>{handle}</strong>. Try entering a different handle.
           </div>
         )}
 
         {!loading && !error && !handle && (
           <div className="notice" style={{ marginTop: '15px' }}>
-            Enter a Codeforces handle in the sidebar to view virtual contest history.
+            Enter a Codeforces handle in the sidebar to view contests history.
           </div>
         )}
       </div>

@@ -1,14 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Cuprum&display=swap');
 
-/* ====================================================================
-   Codeforces Virtual Contests — Pixel-Perfect CSS
-   Faithfully replicates every detail of the actual Codeforces UI.
-   ==================================================================== */
-
 /* ---- Reset ---- */
 *, *::before, *::after { box-sizing: border-box; }
 
-
+ul, ol, form {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
 
 body, html {
     margin: 0;
@@ -18,6 +17,10 @@ body, html {
     font-size: 13px;
     color: #000;
     line-height: 1.6;
+}
+
+html {
+    font-size: 10px;
 }
 
 a { color: #1a5cc8; text-decoration: none; }
@@ -63,38 +66,39 @@ a:hover { text-decoration: underline; }
 .lang-chooser {
     float: right;
     text-align: right;
-    margin-top: 1.5em;
+    margin-top: 1.2em;
+    font-family: verdana, arial, sans-serif;
 }
 
 .lang-chooser img {
     vertical-align: middle;
     margin: 0 2px;
-    height: 16px;
+    height: 14px;
     width: auto;
 }
 
-.lang-chooser .user-handle {
-    font-weight: bold;
+.lang-chooser div {
+    font-size: 1.2rem;
+    padding: 2px 0;
 }
 
-.lang-chooser div {
-    font-size: 12px;
-    padding: 3px 0;
+.lang-chooser a {
+    text-decoration: underline;
 }
 
 .logo-href {
     text-decoration: none;
     font-weight: bold;
-    font-size: 10px;
+    font-size: 1.0rem;
     color: black !important;
 }
 
 /* -- Main Navigation Menu -- */
 .menu-box {
-    margin: 1em 1em 0.5em 1em;
-    padding: 0;
-    height: 44px;
-    line-height: 44px;
+    margin: 0 1em;
+    position: relative;
+    height: 2.5em;
+    line-height: 2.5em;
 }
 
 .menu-list-container {
@@ -103,36 +107,38 @@ a:hover { text-decoration: underline; }
 }
 
 .menu-list {
-    list-style: none;
-    padding: 0;
     margin: 0;
-    height: 100%;
+    padding: 0;
+    margin-left: 1.25em;
+    list-style: none;
 }
 
 .menu-list li {
-    font-family: 'Cuprum', sans-serif;
+    font-family: 'Cuprum', sans-serif !important;
     float: left;
     list-style: none;
     margin-right: 1.2em;
-    padding: 5;
+    padding: 0 0 1px 0;
     position: relative;
-    height: 100%;
+    top: 5px;
 }
 
 .menu-list li a {
+    font-family: 'Cuprum', sans-serif !important;
     font-weight: normal;
-    font-size: 15px;
+    font-size: 1.5rem;
     text-decoration: none;
     color: #000;
     outline: none;
     text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0;
     display: block;
     float: left;
-    height: 100%;
+    height: 20px;
+    overflow: hidden;
     margin: 0;
-    line-height: 44px;
-    text-transform: uppercase;
-    padding: 0 4px;
+    line-height: 22px;
 }
 
 .menu-list li a:hover,
@@ -145,17 +151,21 @@ a:hover { text-decoration: underline; }
     border-bottom: 3px solid var(--menu-blue);
 }
 
+.menu-list li.current a {
+    color: #000;
+}
+
 /* Search form in menu */
 .search {
     border: 1px solid #d4d4d4;
     color: #666;
-    font-size: 12px;
-    height: 20px;
-    width: 120px;
-    line-height: 18px;
+    font-size: 1.0rem;
+    height: 16px;
+    width: 9em;
+    line-height: 16px;
     float: right;
-    padding: 1px 1px 1px 16px;
-    margin: 10px 1em 0 0;
+    padding: 1px 1px 1px 20px;
+    margin: 4px 1em 0 0;
     background: #f4f4f4 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%223%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%20fill%3D%22none%22%2F%3E%3Cline%20x1%3D%226.5%22%20y1%3D%226.5%22%20x2%3D%229%22%20y2%3D%229%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%2F%3E%3C%2Fsvg%3E') 3px center no-repeat;
 }
 
@@ -212,7 +222,7 @@ a:hover { text-decoration: underline; }
 }
 
 .roundbox .caption.titled {
-    padding: 0 0 0.3em 0.5em;
+    padding: 0.3em 0.5em;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -374,7 +384,7 @@ a:hover { text-decoration: underline; }
 /* Datatable inner table container */
 .datatable .datatable-inner {
     background-color: white;
-    margin: 0.3em 3px 0 3px;
+    margin: 0.3em 3px 3px 3px;
     position: relative;
     border-radius: var(--border-radius);
     overflow: hidden;
@@ -566,71 +576,79 @@ select.cf-input {
 
 /* ---- Pagination (exact CF style) ---- */
 .pagination {
-    margin: 0 auto;
-    font-size: 12px;
+    margin: 8px 0;
+    text-align: left;
+    font-size: 13px;
+    font-family: verdana, arial, sans-serif;
 }
 
 .pagination ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .pagination li {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
     margin: 0;
+    padding: 0;
 }
 
-.pagination .page-index {
-    padding: 0.25em;
-}
-
-.pagination .page-index a,
-.pagination .page-index span {
+.pagination .page-index a {
     display: inline-block;
-    padding: 0.25em;
-    border: 1px solid #ccc;
-    color: #1a5cc8;
-    background: #fff;
+    padding: 2px 5px;
+    color: #000;
+    font-weight: bold;
     text-decoration: none;
-    border-radius: 3px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .pagination .page-index a:hover {
-    background: #f0f0f0;
-    text-decoration: none;
+    text-decoration: underline;
+    color: #1a5cc8;
 }
 
 .pagination .page-index.active span {
-    border-color: #1a5cc8;
-    background: #e1e1e1;
+    display: inline-block;
+    padding: 2px 7px;
+    background: #ebebeb;
+    border: 1px solid #d0d0d0;
     color: #000;
     font-weight: bold;
+    font-size: 13px;
+    border-radius: 1px;
 }
 
-.pagination .arrow {
-    font-size: 2em;
+.pagination .page-ellipsis {
+    padding: 0 3px;
     color: #000;
-    border: 1px solid #ccc;
-    background: #fff;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.pagination .arrow a,
+.pagination .arrow span {
+    display: inline-block;
     padding: 0 4px;
-    border-radius: 3px;
+    font-size: 16px;
+    text-decoration: none;
+    color: #000;
+    line-height: 1;
 }
 
-.pagination .arrow.a {
-    margin-right: 0.3em;
+.pagination .arrow a:hover {
+    text-decoration: none;
+    color: #1a5cc8;
 }
 
-.pagination .arrow.inactive {
-    color: #ccc;
-}
-
-.pagination .page-count {
-    color: var(--muted-color);
-    font-size: 11px;
-    margin: 0 0.5em;
+.pagination .arrow.inactive span {
+    color: #cccccc;
+    cursor: default;
 }
 
 /* ---- Stat Widget ---- */
@@ -709,6 +727,7 @@ select.cf-input {
     text-decoration: none;
 }
 .verdict-ac { color: #008000; font-weight: bold; font-size: 12px; }
+.verdict-upsolved { color: #1a5cc8; font-weight: bold; font-size: 11px; }
 .user-violet { color: #a0a !important; font-weight: bold; }
 .verdict-fail { color: #999; font-size: 12px; }
 
@@ -816,3 +835,53 @@ select.cf-input {
     #sidebar { float: none; width: 100%; display: block; margin: 0 0 1em 0; }
     .content-with-sidebar { margin-right: 0 !important; }
 }
+
+/* ---- Unrated Subtext (exact CF style) ---- */
+.unrated-subtext {
+    font-size: 11px;
+    font-family: verdana, arial, sans-serif;
+    color: #888;
+    font-weight: normal;
+    margin-left: 5px;
+    vertical-align: baseline;
+}
+
+/* ---- Multi-Select Filter Chips ---- */
+.filter-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-family: verdana, arial, sans-serif;
+    background: #f7f7f7;
+    color: #444;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.filter-chip:hover {
+    background: #ececec;
+    border-color: #999;
+}
+
+.filter-chip.active {
+    background: #3b5998;
+    color: #fff;
+    border-color: #2e4676;
+    font-weight: 500;
+}
+
+.filter-chip.chip-all {
+    font-weight: bold;
+}
+

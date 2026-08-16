@@ -91,6 +91,10 @@ async function getContestRatingChanges(contestId) {
   return fetchApi('/contest.ratingChanges', { contestId });
 }
 
+async function getProblemsetProblems(tags = '') {
+  return fetchApi('/problemset.problems', tags ? { tags } : {});
+}
+
 export {
   CodeforcesApiError,
   fetchApi,
@@ -100,5 +104,6 @@ export {
   getContestList,
   getContestStandings,
   getContestStatus,
-  getContestRatingChanges
+  getContestRatingChanges,
+  getProblemsetProblems
 };

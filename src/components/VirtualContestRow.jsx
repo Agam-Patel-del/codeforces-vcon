@@ -21,6 +21,17 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
     onClick();
   };
 
+  const renderBadge = () => {
+    if (contest.isUnrated || contest.participationType === 'unrated') {
+      return (
+        <span className="unrated-subtext" title="Out of Competition / Unrated Live">
+          (unrated)
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <tr onClick={handleRowClick} className={index % 2 === 1 ? 'dark' : ''} style={{ cursor: 'pointer' }}>
       <td className="bottom">{index + 1}</td>
@@ -33,6 +44,8 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
         >
           {contestName}
         </a>
+        {' '}
+        {renderBadge()}
       </td>
       <td className="bottom">{formatDate(contestStartTime)}</td>
       <td className="bottom">{formatDate(virtualStartTime)}</td>
