@@ -36,13 +36,26 @@
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td><img src="assets/screenshots/ss1.png"/></td>
-    <td><img src="assets/screenshots/ss2.png"/></td>
-    <td><img src="assets/screenshots/ss3.png"/></td>
-  </tr>
-</table>
+<details>
+<summary>Screenshot 1</summary>
+<br>
+
+![](assets/screenshots/ss1.png)
+</details>
+
+<details>
+<summary>Screenshot 2</summary>
+<br>
+
+![](assets/screenshots/ss2.png)
+</details>
+
+<details>
+<summary>Screenshot 3</summary>
+<br>
+
+![](assets/screenshots/ss3.png)
+</details>
 
 ---
 
