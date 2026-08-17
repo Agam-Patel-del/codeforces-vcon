@@ -12,7 +12,7 @@ function ContestFilters({
   onSearchChange,
   onSolvedFilterChange
 }) {
-  const divisionFilters = ['all', 'div1', 'div2', 'div3', 'div4', 'educational', 'global', 'other'];
+  const divisionFilters = ['all', 'div1', 'div2', 'div3', 'div4', 'educational', 'global', 'gym', 'other'];
   const solvedFilters = ['all', '0-2', '3-4', '5+'];
 
   const getDivLabel = (div) => {
@@ -24,6 +24,7 @@ function ContestFilters({
       case 'div4': return 'Div. 4';
       case 'educational': return 'Educational';
       case 'global': return 'Global';
+      case 'gym': return 'Gym';
       case 'other': return 'Other';
       default: return div;
     }
@@ -48,8 +49,11 @@ function ContestFilters({
             style={{ maxWidth: '17em' }}
           >
             <option value="all">All (Virtual & Unrated)</option>
+            <option value="all-no-gym">All (without Gym)</option>
             <option value="virtual">Virtual Only</option>
+            <option value="virtual-no-gym">Virtual (without Gym)</option>
             <option value="unrated">Unrated (Live) Only</option>
+            <option value="gym">Gym Only</option>
           </select>
         </div>
 

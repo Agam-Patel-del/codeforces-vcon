@@ -43,16 +43,8 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
     return cls;
   };
 
-  const getTableTitle = () => {
-    switch (typeFilter) {
-      case 'virtual': return 'Virtual Contests History';
-      case 'unrated': return 'Unrated Contests History';
-      default: return 'Virtual & Unrated Contests History';
-    }
-  };
-
   const getDateColumnLabel = () => {
-    if (typeFilter === 'virtual') return 'Virtual Date';
+    if (typeFilter === 'virtual' || typeFilter === 'virtual-no-gym') return 'Virtual Date';
     if (typeFilter === 'unrated') return 'Contest Date';
     return 'Participation Date';
   };
@@ -65,7 +57,7 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
       <div className="rb">&nbsp;</div>
 
       <div className="datatable-caption">
-        <span className="title">&rarr; {getTableTitle()}</span>
+        <span className="title">&rarr; Contests</span>
         <span className="row-count">{totalContests} &times;</span>
         <div className="filter-control">
           <span style={{ padding: '0', position: 'relative', bottom: '2px' }}>

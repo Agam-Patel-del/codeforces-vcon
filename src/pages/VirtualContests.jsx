@@ -109,14 +109,19 @@ function VirtualContests() {
 
   const allFilteredContests = useMemo(() => {
     return contests.filter(c => {
-      // Participation type filter (virtual vs unrated)
+      const isGym = (c.contestId && c.contestId >= 100000) || c.contestType === 'gym';
       const pType = c.participationType || (c.isUnrated ? 'unrated' : 'virtual');
+
+      // Participation type filter
+      if (typeFilter === 'all-no-gym' && isGym) return false;
       if (typeFilter === 'virtual' && pType !== 'virtual') return false;
+      if (typeFilter === 'virtual-no-gym' && (pType !== 'virtual' || isGym)) return false;
       if (typeFilter === 'unrated' && pType !== 'unrated') return false;
+      if (typeFilter === 'gym' && !isGym) return false;
 
       // Division filter
       if (filter !== 'all') {
-        const div = c.contestType || getContestType(c.contestName);
+        const div = c.contestType || getContestType(c.contestName, c.contestId);
         if (div !== filter) return false;
       }
 
@@ -250,7 +255,10 @@ function VirtualContests() {
   const getPageTitle = () => {
     switch (typeFilter) {
       case 'virtual': return 'Virtual Contests History';
+      case 'virtual-no-gym': return 'Virtual Contests (without Gym)';
+      case 'all-no-gym': return 'Contests History (without Gym)';
       case 'unrated': return 'Unrated Contests History';
+      case 'gym': return 'Gym Contests History';
       default: return 'Virtual & Unrated Contests History';
     }
   };

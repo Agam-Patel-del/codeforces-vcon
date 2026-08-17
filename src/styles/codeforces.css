@@ -14,7 +14,7 @@ body, html {
     padding: 0;
     background: #fff;
     font-family: verdana, arial, sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     color: #000;
     line-height: 1.6;
 }
@@ -60,26 +60,25 @@ a:hover { text-decoration: underline; }
 /* ---- Header ---- */
 #header {
     min-height: 5em;
-    margin: 0 1em;
+    margin: 3px 1em;
 }
 
 .lang-chooser {
     float: right;
     text-align: right;
-    margin-top: 1.2em;
+    margin-top: 0;
     font-family: verdana, arial, sans-serif;
 }
 
 .lang-chooser img {
     vertical-align: middle;
     margin: 0 2px;
-    height: 14px;
+    height: 24px;
     width: auto;
 }
 
 .lang-chooser div {
-    font-size: 1.2rem;
-    padding: 2px 0;
+    font-size: 14px;
 }
 
 .lang-chooser a {
@@ -97,12 +96,13 @@ a:hover { text-decoration: underline; }
 .menu-box {
     margin: 0 1em;
     position: relative;
-    height: 2.5em;
+    height: 3em;
     line-height: 2.5em;
+
 }
 
 .menu-list-container {
-    margin: 0;
+    margin: 4px;
     height: 100%;
 }
 
@@ -117,6 +117,7 @@ a:hover { text-decoration: underline; }
     font-family: 'Cuprum', sans-serif !important;
     float: left;
     list-style: none;
+    margin-top: 0.5px;
     margin-right: 1.2em;
     padding: 0 0 1px 0;
     position: relative;
@@ -164,9 +165,9 @@ a:hover { text-decoration: underline; }
     width: 9em;
     line-height: 16px;
     float: right;
-    padding: 1px 1px 1px 20px;
-    margin: 4px 1em 0 0;
-    background: #f4f4f4 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%223%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%20fill%3D%22none%22%2F%3E%3Cline%20x1%3D%226.5%22%20y1%3D%226.5%22%20x2%3D%229%22%20y2%3D%229%22%20stroke%3D%22%23666%22%20stroke-width%3D%221%22%2F%3E%3C%2Fsvg%3E') 3px center no-repeat;
+    padding: 1px 3px;
+    margin: 6px 1em 0 0;
+    background: #f4f4f4;
 }
 
 /* ---- Two-Column Layout ---- */

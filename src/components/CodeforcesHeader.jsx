@@ -125,9 +125,6 @@ function CodeforcesHeader({ handle }) {
             <li><a href="https://codeforces.com/calendar">Calendar</a></li>
             <li><a href="https://codeforces.com/help">Help</a></li>
           </ul>
-          <form method="post" action="https://codeforces.com/search">
-            <input className="search" name="query" data-isPlaceholder="true" defaultValue="" placeholder="Search..." />
-          </form>
           <br style={{ clear: 'both' }} />
         </div>
       </div>
