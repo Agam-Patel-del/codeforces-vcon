@@ -79,7 +79,7 @@ To ensure rating conservation across the entire contest:
 2. **Top-Tier Zero-Sum Balance ($adj_2$):**
    Balances the rating shift for the top $k$ performers:
 
-   $$k = \min\left(4 \times \operatorname{round}(\sqrt{N}),\; N\right)$$
+   $$k = \min\left(4 \times \mathrm{round}(\sqrt{N}),\ N\right)$$
 
    $$adj_2 = \min\left(0, \max\left(-10, \left\lfloor -\frac{\sum_{i=1}^{k} (\Delta_{\text{raw}, i} + adj_1)}{k} \right\rfloor\right)\right)$$
 
