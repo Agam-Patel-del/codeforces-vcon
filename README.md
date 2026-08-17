@@ -8,7 +8,6 @@
 
 * **Authentic Codeforces Interface:**
   * Injects a seamless `VIRTUALS` navigation tab into the Codeforces top navbar.
-  * Built using native Codeforces typography, color palettes, tables, and roundbox containers for a pixel-perfect, native experience.
 
 * **Simulated Live Rank:**
   * Evaluates your virtual submission timestamps, points, and attempt penalties, slotting your score directly into the **official live standings** among all contestants.
@@ -20,7 +19,6 @@
 
 * **Interactive Performance Graph:**
   * Visualizes your performance rating progression over time.
-  * Features interactive contest dots with detailed 3rd-quadrant cards showing Contest Title, Date, Rank, Problems Solved, Performance Rating, and Projected Delta ($\Delta$).
 
 * **Sidebar Statistics & Trend Analysis:**
   * **Peak Performance:** Highest performance rating achieved, displayed with official Codeforces rank colors and titles (e.g. *Candidate Master*, *Expert*).
@@ -29,9 +27,6 @@
 * **Progressive Page-Based Loading:**
   * Discovers all virtual participations and renders the table in under half a second.
   * Prioritizes rank and rating calculations for the currently visible page first, while background workers enrich remaining history without blocking user interaction.
-
-* **Contest Problem Breakdown:**
-  * Detailed per-problem diagnostics showing solve times, wrong attempt penalties, and post-contest upsolve tracking.
 
 * **Smart Filtering & Multi-Handle LRU Cache:**
   * Filter contests by Participation Type (*All*, *Virtual Only*, *Unrated Live Only*), Division (*Div. 1*, *Div. 2*, *Div. 3*, *Div. 4*, *Educational*, *Global*), Problems Solved, and Sort Order.
@@ -73,7 +68,7 @@ For a complete breakdown of scoring rules, seed evaluations, binary search root 
 
 * **Frontend:** React 18, JSX
 * **Build Tool:** Vite
-* **Styling:** Vanilla CSS (Authentic Codeforces design system)
+* **Styling:** Vanilla CSS
 * **API:** Official Codeforces REST API
 
 ---
