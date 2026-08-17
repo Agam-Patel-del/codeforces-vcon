@@ -1,6 +1,7 @@
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatDate(timestamp) {
+  if (!timestamp || timestamp <= 0) return '-';
   const date = new Date(timestamp * 1000);
   const d = date.getDate();
   const m = MONTHS[date.getMonth()];
@@ -9,6 +10,7 @@ function formatDate(timestamp) {
 }
 
 function formatDateTime(timestamp) {
+  if (!timestamp || timestamp <= 0) return '-';
   const date = new Date(timestamp * 1000);
   const d = date.getDate();
   const m = MONTHS[date.getMonth()];
@@ -19,6 +21,7 @@ function formatDateTime(timestamp) {
 }
 
 function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '-';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (hours > 0) {
@@ -28,7 +31,9 @@ function formatDuration(seconds) {
 }
 
 function timeAgo(timestamp) {
+  if (!timestamp || timestamp <= 0) return '-';
   const seconds = Math.floor(Date.now() / 1000) - timestamp;
+  if (seconds < 0) return 'just now';
   let interval = Math.floor(seconds / 31536000);
   if (interval >= 1) return `${interval} years ago`;
   interval = Math.floor(seconds / 2592000);

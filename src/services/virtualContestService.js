@@ -20,11 +20,12 @@ async function discoverVirtualContests(handle) {
 
   const groups = new Map();
   for (const sub of participations) {
-    const key = getVirtualContestKey(sub.contestId, sub.author.startTimeSeconds);
+    const vStartTime = sub.author.startTimeSeconds || sub.creationTimeSeconds;
+    const key = getVirtualContestKey(sub.contestId, vStartTime);
     if (!groups.has(key)) {
       groups.set(key, {
         contestId: sub.contestId,
-        virtualStartTime: sub.author.startTimeSeconds,
+        virtualStartTime: vStartTime,
         participationType: sub.author.participantType === 'OUT_OF_COMPETITION' ? 'unrated' : 'virtual',
         submissions: []
       });
@@ -35,17 +36,22 @@ async function discoverVirtualContests(handle) {
   return Array.from(groups.values());
 }
 
-function createQuickVirtualContest(v, contestMap, problemCounts) {
-  const contestInfo = contestMap ? contestMap.get(v.contestId) : null;
+function createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata = {}) {
+  const isGym = v.contestId >= 100000;
+  const contestInfo = contestMap ? contestMap.get(v.contestId) : (gymMetadata[v.contestId] || null);
   const okIndices = new Set(
     (v.submissions || []).filter(s => s.verdict === 'OK').map(s => s.problem.index)
   );
 
+  const contestName = contestInfo ? contestInfo.name : (isGym ? `Gym Contest ${v.contestId}` : `Contest ${v.contestId}`);
+  const contestStartTime = contestInfo ? contestInfo.startTimeSeconds : null;
+  const contestDurationSeconds = contestInfo ? contestInfo.durationSeconds : 0;
+
   return {
     contestId: v.contestId,
-    contestName: contestInfo ? contestInfo.name : `Contest ${v.contestId}`,
-    contestStartTime: contestInfo ? contestInfo.startTimeSeconds : 0,
-    contestDurationSeconds: contestInfo ? contestInfo.durationSeconds : 0,
+    contestName,
+    contestStartTime,
+    contestDurationSeconds,
     virtualStartTime: v.virtualStartTime,
     rank: null,
     solvedCount: okIndices.size,
@@ -57,76 +63,83 @@ function createQuickVirtualContest(v, contestMap, problemCounts) {
     predictedRatingDelta: null,
     predictedRatingAfter: null,
     performanceRating: null,
-    ratingConfidence: 'estimating',
-    contestType: contestInfo ? getContestType(contestInfo.name) : 'other',
-    participationType: v.participationType || 'virtual',
+    ratingConfidence: isGym ? 'unrated' : 'estimating',
+    contestType: getContestType(contestName, v.contestId),
+    participationType: v.participationType || (isGym ? 'unrated' : 'virtual'),
     isOfficial: false,
-    isUnrated: v.participationType === 'unrated',
+    isUnrated: isGym || v.participationType === 'unrated',
     contestUrl: getContestUrl(v.contestId),
     virtualStandingsUrl: getVirtualStandingsUrl(v.contestId),
     submissions: v.submissions || [],
     key: getVirtualContestKey(v.contestId, v.virtualStartTime),
-    isEnriched: false
+    isEnriched: isGym
   };
 }
 
 async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap, participationType = 'virtual') {
+  const isGym = contestId >= 100000;
   const contestInfo = contestMap ? contestMap.get(contestId) : null;
   
   let standingsData = null;
-  try {
-    standingsData = await api.getContestStandings(contestId);
-  } catch (e) {
-    standingsData = { rows: [], problems: [], contest: { type: 'CF' } };
+  if (!isGym) {
+    try {
+      standingsData = await api.getContestStandings(contestId);
+    } catch (e) {
+      standingsData = { rows: [], problems: [], contest: { type: 'CF' } };
+    }
+  } else {
+    standingsData = { rows: [], problems: [], contest: { type: 'ICPC', name: `Gym Contest ${contestId}` } };
   }
 
-  let virtualRank = 0;
-  let row = standingsData.rows.find(r => 
-    (r.party.participantType === 'VIRTUAL' || r.party.participantType === 'OUT_OF_COMPETITION') && 
-    (!r.party.startTimeSeconds || r.party.startTimeSeconds === virtualStartTime)
-  );
+  let virtualRank = null;
+  if (!isGym && standingsData.rows) {
+    let row = standingsData.rows.find(r => 
+      (r.party.participantType === 'VIRTUAL' || r.party.participantType === 'OUT_OF_COMPETITION') && 
+      (!r.party.startTimeSeconds || r.party.startTimeSeconds === virtualStartTime)
+    );
 
-  if (!row && standingsData.rows.length > 0) {
-    let myPoints = 0;
-    let myPenalty = 0;
-    const contestType = standingsData.contest.type; // 'CF' or 'ICPC'
-    
-    standingsData.problems.forEach(p => {
-      const okSub = submissions.find(s => s.verdict === 'OK' && s.problem.index === p.index);
-      if (okSub) {
-        const solveTimeSeconds = okSub.creationTimeSeconds - virtualStartTime;
-        const solveTimeMinutes = Math.max(0, Math.floor(solveTimeSeconds / 60));
-        
-        const wrongTries = submissions.filter(s => 
-          s.problem.index === p.index && 
-          s.creationTimeSeconds < okSub.creationTimeSeconds && 
-          s.verdict !== 'OK' && 
-          s.verdict !== 'COMPILATION_ERROR' && 
-          s.passedTestCount > 0
-        ).length;
+    if (!row && standingsData.rows.length > 0) {
+      let myPoints = 0;
+      let myPenalty = 0;
+      const contestType = standingsData.contest.type; // 'CF' or 'ICPC'
+      
+      standingsData.problems.forEach(p => {
+        const okSub = submissions.find(s => s.verdict === 'OK' && s.problem.index === p.index);
+        if (okSub) {
+          const solveTimeSeconds = okSub.creationTimeSeconds - virtualStartTime;
+          const solveTimeMinutes = Math.max(0, Math.floor(solveTimeSeconds / 60));
+          
+          const wrongTries = submissions.filter(s => 
+            s.problem.index === p.index && 
+            s.creationTimeSeconds < okSub.creationTimeSeconds && 
+            s.verdict !== 'OK' && 
+            s.verdict !== 'COMPILATION_ERROR' && 
+            s.passedTestCount > 0
+          ).length;
 
-        if (contestType === 'ICPC' || p.points === undefined) {
-          myPoints += 1;
-          myPenalty += solveTimeMinutes + 10 * wrongTries;
-        } else {
-          const maxPoints = p.points;
-          let pts = maxPoints - (maxPoints / 250) * solveTimeMinutes - 50 * wrongTries;
-          pts = Math.max(pts, maxPoints * 0.3);
-          myPoints += Math.round(pts);
+          if (contestType === 'ICPC' || p.points === undefined) {
+            myPoints += 1;
+            myPenalty += solveTimeMinutes + 10 * wrongTries;
+          } else {
+            const maxPoints = p.points;
+            let pts = maxPoints - (maxPoints / 250) * solveTimeMinutes - 50 * wrongTries;
+            pts = Math.max(pts, maxPoints * 0.3);
+            myPoints += Math.round(pts);
+          }
         }
-      }
-    });
+      });
 
-    virtualRank = standingsData.rows.filter(r => {
-      const isIcpc = contestType === 'ICPC' || standingsData.problems[0]?.points === undefined;
-      if (isIcpc) {
-        return r.points > myPoints || (r.points === myPoints && r.penalty < myPenalty);
-      } else {
-        return r.points > myPoints;
-      }
-    }).length + 1;
-  } else if (row) {
-    virtualRank = row.rank;
+      virtualRank = standingsData.rows.filter(r => {
+        const isIcpc = contestType === 'ICPC' || standingsData.problems[0]?.points === undefined;
+        if (isIcpc) {
+          return r.points > myPoints || (r.points === myPoints && r.penalty < myPenalty);
+        } else {
+          return r.points > myPoints;
+        }
+      }).length + 1;
+    } else if (row) {
+      virtualRank = row.rank;
+    }
   }
   
   const solvedIndices = new Set(
@@ -188,25 +201,44 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
 
   const upsolvedCount = unsolvedProblems.filter(p => p.upsolved).length;
 
-  const ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
-  let predictedRatingDelta = 0;
-  let predictedRatingAfter = ratingBefore;
+  let ratingBefore = null;
+  let predictedRatingDelta = null;
+  let predictedRatingAfter = null;
   let performanceRating = null;
-  let ratingConfidence = 'estimated';
+  let ratingConfidence = isGym ? 'unrated' : 'estimated';
 
-  if (virtualRank > 0) {
-    const prediction = await ratingService.predictRatingDelta(handle, contestId, virtualRank, virtualStartTime);
-    predictedRatingDelta = prediction.delta;
-    predictedRatingAfter = prediction.newRating;
-    performanceRating = prediction.performanceRating;
-    ratingConfidence = prediction.confidence;
+  if (!isGym) {
+    ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
+    predictedRatingDelta = 0;
+    predictedRatingAfter = ratingBefore;
+
+    if (virtualRank > 0) {
+      const prediction = await ratingService.predictRatingDelta(handle, contestId, virtualRank, virtualStartTime);
+      predictedRatingDelta = prediction.delta;
+      predictedRatingAfter = prediction.newRating;
+      performanceRating = prediction.performanceRating;
+      ratingConfidence = prediction.confidence;
+    }
+  }
+
+  const cfContest = standingsData && standingsData.contest;
+  const contestName = (contestInfo && contestInfo.name) || (cfContest && cfContest.name) || (isGym ? `Gym Contest ${contestId}` : `Contest ${contestId}`);
+  const contestStartTime = (contestInfo && contestInfo.startTimeSeconds) || (cfContest && cfContest.startTimeSeconds) || null;
+  const contestDurationSeconds = (contestInfo && contestInfo.durationSeconds) || (cfContest && cfContest.durationSeconds) || 0;
+
+  if (contestId >= 100000 && cfContest && cfContest.name) {
+    storage.setCachedGymMetadataItem(contestId, {
+      name: cfContest.name,
+      startTimeSeconds: cfContest.startTimeSeconds,
+      durationSeconds: cfContest.durationSeconds
+    }).catch(() => {});
   }
 
   return {
     contestId,
-    contestName: contestInfo ? contestInfo.name : `Contest ${contestId}`,
-    contestStartTime: contestInfo ? contestInfo.startTimeSeconds : 0,
-    contestDurationSeconds: contestInfo ? contestInfo.durationSeconds : 0,
+    contestName,
+    contestStartTime,
+    contestDurationSeconds,
     virtualStartTime,
     rank: virtualRank,
     solvedCount: solvedProblems.length,
@@ -219,7 +251,7 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
     predictedRatingAfter,
     performanceRating,
     ratingConfidence,
-    contestType: contestInfo ? getContestType(contestInfo.name) : 'other',
+    contestType: getContestType(contestName),
     participationType,
     isOfficial: false,
     isUnrated: participationType === 'unrated',
@@ -250,6 +282,7 @@ async function loadOrDiscoverContests(handle) {
   }
   const contestMap = new Map(contestList.map(c => [c.id, c]));
   const problemCounts = await getContestProblemCountsMap();
+  const gymMetadata = await storage.getCachedGymMetadata();
 
   const discovered = await discoverVirtualContests(handle);
   
@@ -264,7 +297,7 @@ async function loadOrDiscoverContests(handle) {
       merged.push(existing);
     } else {
       unenrichedCount++;
-      const quick = createQuickVirtualContest(v, contestMap, problemCounts);
+      const quick = createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata);
       merged.push(quick);
     }
   }

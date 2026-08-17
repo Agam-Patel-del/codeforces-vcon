@@ -15,7 +15,8 @@ import {
 import { 
   getHandle, 
   setHandle as saveHandleToStorage,
-  getLastSyncTime
+  getLastSyncTime,
+  clearCache
 } from '../services/storageService.js';
 import { getContestType } from '../utils/contest.js';
 import { formatDateTime } from '../utils/dates.js';
@@ -86,6 +87,24 @@ function VirtualContests() {
   const handleRefresh = async () => {
     if (!handle) return;
     fetchData(handle, true);
+  };
+
+  const handleClearData = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete all cached data?\n\nThis will clear all stored contests, ratings, and handle history from the extension.'
+    );
+    if (!confirmed) return;
+
+    try {
+      await clearCache();
+      setContests([]);
+      setHandleState('');
+      setLastSync(null);
+      setError(null);
+      contestMapRef.current = new Map();
+    } catch (e) {
+      setError('Failed to clear data: ' + (e.message || e));
+    }
   };
 
   const allFilteredContests = useMemo(() => {
@@ -301,8 +320,16 @@ function VirtualContests() {
               <div style={{ fontSize: '1.1rem', color: '#888' }}>
                 Last synced: {lastSync ? formatDateTime(Math.floor(lastSync / 1000)) : 'Never'}
                 {' '}
-                <button className="cf-btn" onClick={handleRefresh} style={{ marginLeft: '6px' }}>
-                  Force Refresh
+                <button className="cf-btn" onClick={handleRefresh} style={{ marginLeft: '6px' }} title="Scan Codeforces for new contests and activity">
+                  Refresh
+                </button>
+                <button
+                  className="cf-btn"
+                  onClick={handleClearData}
+                  style={{ marginLeft: '6px', color: '#b91c1c' }}
+                  title="Delete all cached contest data and reset the extension"
+                >
+                  Clear Data
                 </button>
               </div>
             </div>

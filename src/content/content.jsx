@@ -9,13 +9,16 @@
   
   function detectHandle() {
     try {
-      const headerNav = document.querySelector('.lang-chooser') || document.querySelector('#header');
-      if (headerNav) {
-        const profileLinks = headerNav.querySelectorAll('a[href^="/profile/"]');
-        for (const link of profileLinks) {
-          const handle = link.textContent.trim();
-          if (handle && handle !== 'Register' && handle !== 'Enter' && handle !== 'Login') {
-            return handle;
+      const langChooser = document.querySelector('.lang-chooser');
+      if (langChooser) {
+        const hasLogout = !!langChooser.querySelector('a[href*="logout"], a[href*="Logout"]');
+        if (hasLogout) {
+          const profileLink = langChooser.querySelector('a[href^="/profile/"]');
+          if (profileLink) {
+            const handle = profileLink.textContent.trim();
+            if (handle && handle !== 'Register' && handle !== 'Enter' && handle !== 'Login') {
+              return handle;
+            }
           }
         }
       }

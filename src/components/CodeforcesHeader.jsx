@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { getAuthHandle } from '../services/storageService.js';
+import { getAuthHandle, setAuthHandle as saveAuthHandle } from '../services/storageService.js';
 
 function CodeforcesHeader({ handle }) {
   const [authHandle, setAuthHandle] = useState(null);
 
   useEffect(() => {
-    const loadAuthHandle = async () => {
-      const h = await getAuthHandle();
-      setAuthHandle(h || null);
-    };
-    loadAuthHandle();
+    let isMounted = true;
+
+    // Load authentic user handle detected by content script
+    getAuthHandle().then(cached => {
+      if (isMounted) {
+        setAuthHandle(cached || null);
+      }
+    });
 
     const listener = (changes, areaName) => {
       if (areaName === 'local' && changes.cf_auth_handle) {
@@ -19,9 +22,21 @@ function CodeforcesHeader({ handle }) {
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(listener);
-      return () => chrome.storage.onChanged.removeListener(listener);
+      return () => {
+        isMounted = false;
+        chrome.storage.onChanged.removeListener(listener);
+      };
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const handleLogoutClick = async () => {
+    await saveAuthHandle(null);
+    setAuthHandle(null);
+  };
 
   return (
     <>
@@ -73,7 +88,13 @@ function CodeforcesHeader({ handle }) {
                   {authHandle}
                 </a>
                 {' | '}
-                <a href="https://codeforces.com/logout" style={{ textDecoration: 'underline' }}>Logout</a>
+                <a
+                  href="https://codeforces.com/logout"
+                  onClick={handleLogoutClick}
+                  style={{ textDecoration: 'underline' }}
+                >
+                  Logout
+                </a>
               </>
             ) : (
               <>

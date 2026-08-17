@@ -2,9 +2,10 @@ const KEYS = {
   HANDLE: 'cf_handle',
   AUTH_HANDLE: 'cf_auth_handle',
   CONTEST_LIST: 'cf_contest_list',
-  VIRTUAL_CONTESTS: 'cf_virtual_contests_v4',
+  GYM_METADATA: 'cf_gym_metadata',
+  VIRTUAL_CONTESTS: 'cf_virtual_contests_v5',
   RATING_HISTORY: 'cf_rating_history',
-  CONTEST_RATING_CHANGES: 'cf_rating_changes_v2', // Use new slim key
+  CONTEST_RATING_CHANGES: 'cf_rating_changes_v3',
   LAST_SYNC: 'cf_last_sync',
   HANDLE_LRU: 'cf_handle_lru',
   OFFICIAL_SOLVES: 'cf_official_solves',
@@ -15,14 +16,35 @@ const KEYS = {
 
 const MAX_CACHED_HANDLES = 25;
 
-// Immediately free up quota from the old bulky key
-try {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.remove('cf_contest_rating_changes', () => {});
-  } else {
-    localStorage.removeItem('cf_contest_rating_changes');
-  }
-} catch (e) {}
+// Automatically purge any obsolete/old version storage keys (e.g. _v1, _v2, _v3)
+function purgeLegacyStorageKeys() {
+  const currentKeySet = new Set(Object.values(KEYS));
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(null, (allData) => {
+        if (!allData) return;
+        const keysToRemove = Object.keys(allData).filter(
+          k => k.startsWith('cf_') && !currentKeySet.has(k)
+        );
+        if (keysToRemove.length > 0) {
+          chrome.storage.local.remove(keysToRemove, () => {});
+        }
+      });
+    } else if (typeof localStorage !== 'undefined') {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('cf_') && !currentKeySet.has(k)) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+  } catch (e) {}
+}
+
+purgeLegacyStorageKeys();
 
 function getStorage() {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
@@ -147,6 +169,21 @@ async function setCachedContestList(contests) {
   return set(KEYS.CONTEST_LIST, contests);
 }
 
+async function getCachedGymMetadata() {
+  return (await get(KEYS.GYM_METADATA)) || {};
+}
+
+async function setCachedGymMetadataItem(contestId, metadata) {
+  if (!contestId || !metadata) return;
+  const map = (await get(KEYS.GYM_METADATA)) || {};
+  map[contestId] = {
+    name: metadata.name,
+    startTimeSeconds: metadata.startTimeSeconds,
+    durationSeconds: metadata.durationSeconds
+  };
+  return set(KEYS.GYM_METADATA, map);
+}
+
 async function getCachedVirtualContests(handle) {
   if (handle) await updateLRU(handle);
   const data = await get(KEYS.VIRTUAL_CONTESTS) || {};
@@ -208,35 +245,9 @@ async function clearCache() {
   });
 }
 
-async function detectAuthenticatedHandleFromCF() {
-  try {
-    const response = await fetch('https://codeforces.com/', { credentials: 'include' });
-    if (!response.ok) return null;
-    const html = await response.text();
-    const match = html.match(/href="\/profile\/([a-zA-Z0-9_.-]+)"/i);
-    if (match && match[1]) {
-      const handle = match[1].trim();
-      const lower = handle.toLowerCase();
-      if (lower !== 'enter' && lower !== 'register' && lower !== 'login') {
-        await set(KEYS.AUTH_HANDLE, handle);
-        return handle;
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to detect authenticated handle from Codeforces:', e);
-  }
-  return null;
-}
-
 async function getAuthHandle() {
   const cached = await get(KEYS.AUTH_HANDLE);
-  if (cached) return cached;
-
-  const detected = await detectAuthenticatedHandleFromCF();
-  if (detected) return detected;
-
-  const primary = await getHandle();
-  return primary || null;
+  return cached || null;
 }
 
 async function setAuthHandle(handle) {
@@ -287,6 +298,8 @@ export {
   setAuthHandle,
   getCachedContestList,
   setCachedContestList,
+  getCachedGymMetadata,
+  setCachedGymMetadataItem,
   getCachedVirtualContests,
   setCachedVirtualContests,
   getCachedRatingHistory,
