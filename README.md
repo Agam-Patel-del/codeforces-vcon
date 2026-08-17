@@ -34,6 +34,18 @@
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="assets/screenshots/ss1.png"/></td>
+    <td><img src="assets/screenshots/ss2.png"/></td>
+    <td><img src="assets/screenshots/ss3.png"/></td>
+  </tr>
+</table>
+
+---
+
 ## Installation
 
 ### Load Unpacked Extension in Chrome:
