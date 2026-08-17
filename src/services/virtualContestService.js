@@ -219,6 +219,10 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
       performanceRating = prediction.performanceRating;
       ratingConfidence = prediction.confidence;
     }
+
+    if (predictedRatingDelta === 0 && performanceRating == null) {
+      performanceRating = ratingBefore;
+    }
   }
 
   const cfContest = standingsData && standingsData.contest;
@@ -311,6 +315,32 @@ async function loadOrDiscoverContests(handle) {
   };
 }
 
+let pendingStorageUpdates = new Map(); // Map of handle -> Map of key -> contest
+let storageFlushTimeout = null;
+
+async function flushStorageUpdates() {
+  const handlesToProcess = Array.from(pendingStorageUpdates.keys());
+  for (const handle of handlesToProcess) {
+    const updatesMap = pendingStorageUpdates.get(handle);
+    if (!updatesMap || updatesMap.size === 0) continue;
+    
+    const updates = Array.from(updatesMap.values());
+    pendingStorageUpdates.delete(handle);
+    
+    try {
+      const cachedData = await storage.getCachedVirtualContests(handle) || [];
+      const updatedMap = new Map(cachedData.map(c => [c.key, c]));
+      for (const c of updates) {
+        updatedMap.set(c.key, c);
+      }
+      await storage.setCachedVirtualContests(handle, Array.from(updatedMap.values()));
+      await storage.setLastSyncTime();
+    } catch (e) {
+      console.warn(`Failed to flush virtual contests to storage for handle ${handle}:`, e);
+    }
+  }
+}
+
 /**
  * Enriches a single contest on demand and incrementally caches it in storage.
  */
@@ -328,12 +358,18 @@ async function enrichSingleContest(handle, contestObj, contestMap) {
     contestObj.participationType
   );
 
-  // Update storage incrementally
-  const cachedData = await storage.getCachedVirtualContests(handle) || [];
-  const updated = cachedData.filter(c => c.key !== enriched.key);
-  updated.push(enriched);
-  await storage.setCachedVirtualContests(handle, updated);
-  await storage.setLastSyncTime();
+  // Update storage safely and incrementally batched
+  if (!pendingStorageUpdates.has(handle)) {
+    pendingStorageUpdates.set(handle, new Map());
+  }
+  pendingStorageUpdates.get(handle).set(enriched.key, enriched);
+  
+  if (!storageFlushTimeout) {
+    storageFlushTimeout = setTimeout(() => {
+      storageFlushTimeout = null;
+      flushStorageUpdates();
+    }, 2000); // Flush to storage every 2 seconds
+  }
 
   return enriched;
 }

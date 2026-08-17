@@ -194,45 +194,70 @@ function VirtualContests() {
 
   const totalPages = Math.ceil(sortedContests.length / ITEMS_PER_PAGE);
 
+  const enrichingRef = useRef(new Set());
+  const paginatedContestsRef = useRef(paginatedContests);
+  const contestsRef = useRef(contests);
+  const batchedUpdatesRef = useRef([]);
+  const batchTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    paginatedContestsRef.current = paginatedContests;
+  }, [paginatedContests]);
+
+  useEffect(() => {
+    contestsRef.current = contests;
+  }, [contests]);
+
+  const applyBatchedUpdates = useCallback(() => {
+    if (batchedUpdatesRef.current.length === 0) return;
+    const currentBatch = [...batchedUpdatesRef.current];
+    batchedUpdatesRef.current = [];
+    setContests(prev => {
+      const map = new Map(prev.map(c => [c.key, c]));
+      currentBatch.forEach(c => map.set(c.key, c));
+      return Array.from(map.values());
+    });
+  }, []);
+
   // Progressive Enrichment: Prioritize visible page, then gentle background queue
   useEffect(() => {
-    if (!handle || contests.length === 0) return;
-
+    if (!handle) return;
     let isMounted = true;
 
     const runProgressiveEnrichment = async () => {
-      // 1. Priority 1: Enrich visible un-enriched contests on current page first
-      const visibleUnenriched = paginatedContests.filter(c => c.isEnriched === false || c.rank == null);
-      
-      for (const item of visibleUnenriched) {
-        if (!isMounted) break;
-        try {
-          const enriched = await enrichSingleContest(handle, item, contestMapRef.current);
-          if (isMounted && enriched) {
-            setContests(prev => prev.map(c => c.key === enriched.key ? enriched : c));
-          }
-        } catch (e) {
-          console.warn(`Failed to enrich contest ${item.contestId}:`, e);
-        }
-      }
+      while (isMounted) {
+        // 1. Priority 1: Enrich visible un-enriched contests on current page first
+        let visibleUnenriched = (paginatedContestsRef.current || []).filter(c => c.isEnriched === false || c.rank == null);
+        let toProcess = visibleUnenriched.find(c => !enrichingRef.current.has(c.key));
 
-      // 2. Priority 2: Background worker for any remaining un-enriched contests
-      const remainingUnenriched = contests.filter(c => c.isEnriched === false || c.rank == null);
-      for (const item of remainingUnenriched) {
-        if (!isMounted) break;
-        // Don't process if already enriched in visible pass
-        if (item.isEnriched && item.rank != null) continue;
-        
+        // 2. Priority 2: Background worker for any remaining un-enriched contests
+        if (!toProcess) {
+          let allUnenriched = (contestsRef.current || []).filter(c => c.isEnriched === false || c.rank == null);
+          toProcess = allUnenriched.find(c => !enrichingRef.current.has(c.key));
+        }
+
+        if (!toProcess) {
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+
+        enrichingRef.current.add(toProcess.key);
         try {
-          await new Promise(r => setTimeout(r, 200)); // Gentle rate-limit pause
-          if (!isMounted) break;
-          const enriched = await enrichSingleContest(handle, item, contestMapRef.current);
+          const enriched = await enrichSingleContest(handle, toProcess, contestMapRef.current);
           if (isMounted && enriched) {
-            setContests(prev => prev.map(c => c.key === enriched.key ? enriched : c));
+            batchedUpdatesRef.current.push(enriched);
+            if (!batchTimeoutRef.current) {
+              batchTimeoutRef.current = setTimeout(() => {
+                applyBatchedUpdates();
+                batchTimeoutRef.current = null;
+              }, 500); // UI update batching
+            }
           }
         } catch (e) {
-          console.warn(`Background enrichment error on contest ${item.contestId}:`, e);
+          console.warn(`Failed to enrich contest ${toProcess.contestId}:`, e);
         }
+
+        await new Promise(r => setTimeout(r, 200)); // Gentle rate-limit pause
       }
     };
 
@@ -240,8 +265,13 @@ function VirtualContests() {
 
     return () => {
       isMounted = false;
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+        batchTimeoutRef.current = null;
+      }
+      applyBatchedUpdates();
     };
-  }, [paginatedContests, handle]);
+  }, [handle, applyBatchedUpdates]);
 
   // Reset page to 1 if filters change
   useEffect(() => {
