@@ -51,31 +51,7 @@ $$\text{Seed}(R) = 1 + \sum_{i=1}^{N} P(\text{Contestant}_i > R) = 1 + \sum_{i=1
 
 ---
 
-## 3. Performance Rating ($R_{\text{perf}}$)
-
-### What is Performance Rating?
-While your official rating changes gradually over time, your **Performance Rating** measures your **pure skill output in a single contest**. It answers the question:
-> *"What rating should you have such that your expected rank against this specific contest field matches your actual achieved rank?"*
-
-$$\text{Seed}(R_{\text{perf}}) = \text{Actual Rank}$$
-
-### How It Is Calculated (Binary Search)
-Since $\text{Seed}(R)$ strictly decreases as rating $R$ increases, the engine finds $R_{\text{perf}}$ rapidly using binary search over the rating range $[-500, 6000]$:
-
-```text
-Low = -500, High = 6000
-While (High - Low > 1):
-    Mid = (Low + High) / 2
-    If Seed(Mid) > Actual_Rank:
-        Low = Mid   // Rating is too low (expected rank is too high)
-    Else:
-        High = Mid  // Rating is high enough
-Return Low
-```
-
----
-
-## 4. Projected Rating Delta ($\Delta$)
+## 3. Projected Rating Delta ($\Delta$)
 
 The projected rating change simulates the official Codeforces rating update procedure in 4 steps:
 
@@ -91,23 +67,48 @@ $$\text{Seed}(R_{\text{target}}) = m$$
 
 ### Step 3: Raw Delta
 
-$$\Delta_{\text{raw}} = \frac{R_{\text{target}} - R_{\text{init}}}{2}$$
+$$\Delta_{\text{raw}}(R) = \left\lfloor \frac{R_{\text{target}} - R}{2} \right\rfloor$$
 
 ### Step 4: Multi-Tier Contest Adjustments
 To ensure rating conservation across the entire contest:
 
 1. **Global Contest Deflation Adjustment ($adj_1$):**
 
-   $$adj_1 = \min\left(0, \max\left(-10, -\frac{\sum \Delta_{\text{raw}}}{N}\right)\right)$$
+   $$adj_1 = \left\lfloor -\frac{\sum \Delta_{\text{raw}}}{N} \right\rfloor - 1$$
 
 2. **Top-Tier Zero-Sum Balance ($adj_2$):**
-   Balances the rating shift for top performers ($k = \min(100, \text{round}(\sqrt{N}))$):
+   Balances the rating shift for top performers ($k = \min(4 \times \text{round}(\sqrt{N}), N)$):
 
-   $$adj_2 = -\frac{\sum_{i=1}^{k} (\Delta_{\text{raw}, i} + adj_1)}{k}$$
+   $$adj_2 = \min\left(0, \max\left(-10, \left\lfloor -\frac{\sum_{i=1}^{k} (\Delta_{\text{raw}, i} + adj_1)}{k} \right\rfloor\right)\right)$$
 
 3. **Final Projected Delta:**
 
-   $$\Delta = \Delta_{\text{raw}} + adj_1 + \left(adj_2 \times \max\left(0, 1 - \frac{\text{Actual Rank}}{k}\right)\right)$$
+   $$\Delta(R) = \Delta_{\text{raw}}(R) + \text{adjustment}, \quad \text{where } \text{adjustment} = adj_1 + adj_2$$
+
+---
+
+## 4. Performance Rating ($R_{\text{perf}}$)
+
+### What is Performance Rating?
+While your official rating changes gradually over time, your **Performance Rating** measures your **pure skill output in a single contest**. It is defined as the rating at which your projected rating change ($\Delta$) in that contest would be exactly zero:
+
+$$\Delta(R_{\text{perf}}) = \Delta_{\text{raw}}(R_{\text{perf}}) + \text{adjustment} = 0$$
+
+> *"What rating should you have such that competing in this round leaves your rating completely unchanged ($\Delta = 0$) after all contest deflation adjustments?"*
+
+### How It Is Calculated (Binary Search)
+Since projected delta $\Delta(R)$ strictly decreases as rating $R$ increases, the engine finds $R_{\text{perf}}$ rapidly using binary search over the rating range $[-500, 6000]$:
+
+```text
+Low = -500, High = 6000
+While (Low < High):
+    Mid = (Low + High) / 2
+    If (RawDelta(Mid, Actual_Rank) + Adjustment <= 0):
+        High = Mid  // Rating is high enough (delta <= 0)
+    Else:
+        Low = Mid + 1 // Rating is too low (delta > 0)
+Return Low
+```
 
 ---
 
