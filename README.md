@@ -1,6 +1,6 @@
 # Codeforces-Vcon
 
-**Codeforces-Vcon** is a Chrome extension that integrates a dedicated virtual contest history and performance analytics interface directly into Codeforces. It enables competitive programmers to track, analyze, and visualize their performance across virtual and unrated practice contests with an authentic user interface.
+**Codeforces-Vcon** is a browser extension for **Google Chrome** and **Mozilla Firefox** that integrates a dedicated virtual contest history and performance analytics interface directly into Codeforces. It enables competitive programmers to track, analyze, and visualize their performance across virtual and unrated practice contests with an authentic user interface.
 
 ---
 
@@ -59,27 +59,71 @@
 
 ---
 
-## Installation
+## Installation & Setup
 
-### Load Unpacked Extension in Chrome:
+### Prerequisites
+* [Node.js](https://nodejs.org/) (version 18 or higher recommended)
+* [Git](https://git-scm.com/)
 
-1. Clone or download this repository:
-   ```bash
-   git clone https://github.com/Agam-Patel-del/codeforces-vcon.git
-   cd codeforces-vcon
-   ```
-2. Install dependencies and build the extension:
-   ```bash
-   npm install
-   npm run build
-   ```
-3. Open Google Chrome and navigate to:
-   ```text
-   chrome://extensions/
-   ```
-4. Enable **Developer mode** (toggle in the top-right corner).
-5. Click **Load unpacked** and select the built `dist` folder.
-6. Open [Codeforces](https://codeforces.com/) to access the new **VIRTUALS** tab.
+---
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Agam-Patel-del/codeforces-vcon.git
+cd codeforces-vcon
+```
+
+---
+
+### Step 2: Build the Extension
+
+Run the single-command build for your browser:
+
+* **For Google Chrome (and Chromium browsers):**
+  ```bash
+  npm run vcon
+  ```
+  *(Automatically pulls latest updates, installs dependencies, and builds into `dist/chrome`)*
+
+* **For Mozilla Firefox:**
+  ```bash
+  npm run vcon:f
+  # or: npm run vcon:firefox
+  ```
+  *(Automatically pulls latest updates, installs dependencies, and builds into `dist/firefox`)*
+
+* **Build Both Chrome & Firefox at once:**
+  ```bash
+  npm run build:all
+  ```
+
+
+---
+
+### Step 3: Load into Your Browser
+
+#### 🌐 Google Chrome & Chromium Browsers (Brave, Edge, Opera, Arc)
+1. Open Chrome and navigate to `chrome://extensions/` (or `edge://extensions/`, `brave://extensions/`).
+2. Enable **Developer mode** (toggle switch in the top-right corner).
+3. Click the **Load unpacked** button.
+4. Select the **`dist/chrome`** folder in your cloned repository.
+5. Open [Codeforces](https://codeforces.com/) to see the new **VIRTUALS** tab in the top navigation bar!
+
+#### 🦊 Mozilla Firefox
+1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+2. Click the **Load Temporary Add-on...** button.
+3. Open the **`dist/firefox`** folder and select the `manifest.json` file.
+4. Open [Codeforces](https://codeforces.com/) to see the new **VIRTUALS** tab in the top navigation bar!
+
+---
+
+### Development Mode
+To start a live development server:
+```bash
+npm run dev
+```
+
+
 
 ---
 

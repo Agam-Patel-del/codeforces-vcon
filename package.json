@@ -2,10 +2,22 @@
   "name": "codeforces-virtual-contests",
   "version": "1.0.0",
   "private": true,
-  "description": "Chrome extension that adds virtual contest history and analytics to Codeforces",
+  "type": "module",
+  "description": "Chrome and Firefox extension that adds virtual contest history and analytics to Codeforces",
+  "bin": {
+    "vcon": "./bin/vcon.js",
+    "vcon-f": "./bin/vcon-firefox.js",
+    "vcon-firefox": "./bin/vcon-firefox.js"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "vcon": "node ./bin/vcon.js",
+    "vcon:f": "node ./bin/vcon-firefox.js",
+    "vcon:firefox": "node ./bin/vcon-firefox.js",
+    "build": "node ./bin/vcon.js --no-pull --no-install",
+    "build:chrome": "node ./bin/vcon.js --no-pull --no-install --chrome",
+    "build:firefox": "node ./bin/vcon-firefox.js --no-pull --no-install",
+    "build:all": "node ./bin/vcon.js --no-pull --no-install --all",
     "preview": "vite preview"
   },
   "dependencies": {
