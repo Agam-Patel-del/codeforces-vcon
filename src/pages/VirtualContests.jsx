@@ -219,18 +219,15 @@ function VirtualContests() {
     });
   }, []);
 
-  // Progressive Enrichment: Prioritize visible page, then gentle background queue
   useEffect(() => {
     if (!handle) return;
     let isMounted = true;
 
     const runProgressiveEnrichment = async () => {
       while (isMounted) {
-        // 1. Priority 1: Enrich visible un-enriched contests on current page first
         let visibleUnenriched = (paginatedContestsRef.current || []).filter(c => c.isEnriched === false || c.rank == null);
         let toProcess = visibleUnenriched.find(c => !enrichingRef.current.has(c.key));
 
-        // 2. Priority 2: Background worker for any remaining un-enriched contests
         if (!toProcess) {
           let allUnenriched = (contestsRef.current || []).filter(c => c.isEnriched === false || c.rank == null);
           toProcess = allUnenriched.find(c => !enrichingRef.current.has(c.key));
@@ -273,7 +270,6 @@ function VirtualContests() {
     };
   }, [handle, applyBatchedUpdates]);
 
-  // Reset page to 1 if filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [typeFilter, filter, solvedFilter, sort, search, handle]);

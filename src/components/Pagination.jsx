@@ -8,25 +8,18 @@ function getPageList(currentPage, totalPages) {
   }
 
   const set = new Set();
-  // Always include first 2 and last 2 pages
   set.add(1);
   set.add(2);
   set.add(totalPages - 1);
   set.add(totalPages);
 
-  // Include current page and immediate neighbors
   set.add(currentPage);
   if (currentPage > 1) set.add(currentPage - 1);
   if (currentPage < totalPages) set.add(currentPage + 1);
-
-  // If at start, show extra neighbor
   if (currentPage === 1 || currentPage === 2) set.add(3);
-
-  // If at end, show extra neighbor
   if (currentPage === totalPages || currentPage === totalPages - 1) set.add(totalPages - 2);
 
   const sorted = Array.from(set).filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b);
-
   const result = [];
   for (let i = 0; i < sorted.length; i++) {
     if (i > 0 && sorted[i] > sorted[i - 1] + 1) {

@@ -288,7 +288,10 @@ async function loadOrDiscoverContests(handle) {
   const problemCounts = await getContestProblemCountsMap();
   const gymMetadata = await storage.getCachedGymMetadata();
 
-  const discovered = await discoverVirtualContests(handle);
+  const [discovered] = await Promise.all([
+    discoverVirtualContests(handle),
+    ratingService.refreshRatingHistory(handle)
+  ]);
   
   const merged = [];
   let unenrichedCount = 0;

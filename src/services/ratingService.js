@@ -12,14 +12,20 @@ import {
 async function getRatingHistory(handle) {
   let history = await storage.getCachedRatingHistory(handle);
   if (!history) {
-    try {
-      history = await api.getUserRating(handle);
-      await storage.setCachedRatingHistory(handle, history);
-    } catch (e) {
-      history = [];
-    }
+    history = await refreshRatingHistory(handle);
   }
   return history;
+}
+
+async function refreshRatingHistory(handle) {
+  try {
+    const history = await api.getUserRating(handle);
+    await storage.setCachedRatingHistory(handle, history);
+    return history;
+  } catch (e) {
+    const cached = await storage.getCachedRatingHistory(handle);
+    return cached || [];
+  }
 }
 
 // June 10, 2020 rating system update timestamp
@@ -164,5 +170,6 @@ export {
   getRatedContestCountAtTime,
   predictRatingDelta,
   getPerformanceRating,
-  getPerformanceRating as getPurePerformanceRating
+  getPerformanceRating as getPurePerformanceRating,
+  refreshRatingHistory
 };
