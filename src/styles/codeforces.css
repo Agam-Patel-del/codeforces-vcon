@@ -85,6 +85,23 @@ a:hover { text-decoration: underline; }
     text-decoration: underline;
 }
 
+.header-bell {
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+.header-bell__img {
+    opacity: 0.5;
+    background-image: url('https://codeforces.org/s/44561/images/icons/bell_inactive-20x20.png');
+    position: relative;
+    bottom: 1px;
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .logo-href {
     text-decoration: none;
     font-weight: bold;
