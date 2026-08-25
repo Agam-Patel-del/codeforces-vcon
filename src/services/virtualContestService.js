@@ -201,34 +201,65 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
 
   const upsolvedCount = unsolvedProblems.filter(p => p.upsolved).length;
 
+  const cfContest = standingsData && standingsData.contest;
+  const contestName = (contestInfo && contestInfo.name) || (cfContest && cfContest.name) || (isGym ? `Gym Contest ${contestId}` : `Contest ${contestId}`);
+  const contestStartTime = (contestInfo && contestInfo.startTimeSeconds) || (cfContest && cfContest.startTimeSeconds) || null;
+  const contestDurationSeconds = (contestInfo && contestInfo.durationSeconds) || (cfContest && cfContest.durationSeconds) || 0;
+  const resolvedContestType = getContestType(contestName, contestId);
+
   let ratingBefore = null;
   let predictedRatingDelta = null;
   let predictedRatingAfter = null;
   let performanceRating = null;
   let ratingConfidence = isGym ? 'unrated' : 'estimated';
+  let isUnratedByDivision = false;
 
   if (!isGym) {
     ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
+    
+    // Determine if the user's rating exceeds the threshold for the contest division
+    if (resolvedContestType === 'div3' && ratingBefore >= 1600) {
+      isUnratedByDivision = true;
+    } else if (resolvedContestType === 'div4' && ratingBefore >= 1400) {
+      isUnratedByDivision = true;
+    } else if (resolvedContestType === 'educational' && ratingBefore >= 2100) {
+      isUnratedByDivision = true;
+    } else if (resolvedContestType === 'div2') {
+      let isParallelDiv1 = false;
+      if (contestMap && contestStartTime) {
+        for (const other of contestMap.values()) {
+          if (other.startTimeSeconds === contestStartTime && other.id !== contestId && other.name.includes('Div. 1')) {
+            isParallelDiv1 = true;
+            break;
+          }
+        }
+      }
+      const div2Threshold = isParallelDiv1 ? 1900 : 2100;
+      if (ratingBefore >= div2Threshold) {
+        isUnratedByDivision = true;
+      }
+    }
+    
     predictedRatingDelta = 0;
     predictedRatingAfter = ratingBefore;
 
-    if (virtualRank > 0) {
+    if (virtualRank > 0 && !isUnratedByDivision) {
       const prediction = await ratingService.predictRatingDelta(handle, contestId, virtualRank, virtualStartTime);
       predictedRatingDelta = prediction.delta;
       predictedRatingAfter = prediction.newRating;
       performanceRating = prediction.performanceRating;
       ratingConfidence = prediction.confidence;
+    } else if (isUnratedByDivision) {
+      ratingConfidence = 'unrated';
+      if (virtualRank > 0) {
+        performanceRating = await ratingService.getPerformanceRating(contestId, virtualRank, virtualStartTime);
+      }
     }
 
     if (predictedRatingDelta === 0 && performanceRating == null) {
       performanceRating = ratingBefore;
     }
   }
-
-  const cfContest = standingsData && standingsData.contest;
-  const contestName = (contestInfo && contestInfo.name) || (cfContest && cfContest.name) || (isGym ? `Gym Contest ${contestId}` : `Contest ${contestId}`);
-  const contestStartTime = (contestInfo && contestInfo.startTimeSeconds) || (cfContest && cfContest.startTimeSeconds) || null;
-  const contestDurationSeconds = (contestInfo && contestInfo.durationSeconds) || (cfContest && cfContest.durationSeconds) || 0;
 
   if (contestId >= 100000 && cfContest && cfContest.name) {
     storage.setCachedGymMetadataItem(contestId, {
@@ -255,10 +286,10 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
     predictedRatingAfter,
     performanceRating,
     ratingConfidence,
-    contestType: getContestType(contestName),
+    contestType: resolvedContestType,
     participationType,
     isOfficial: false,
-    isUnrated: participationType === 'unrated',
+    isUnrated: participationType === 'unrated' || isUnratedByDivision,
     contestUrl: getContestUrl(contestId),
     virtualStandingsUrl: getVirtualStandingsUrl(contestId),
     fetchedAt: Math.floor(Date.now() / 1000),
