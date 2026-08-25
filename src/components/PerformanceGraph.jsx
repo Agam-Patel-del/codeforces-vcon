@@ -309,9 +309,9 @@ function PerformanceGraph({ contests }) {
               className="cf-btn"
               onClick={() => setIncludeUnrated(!includeUnrated)}
               style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
-              title="Toggle unrated contests in graph"
+              title="Toggle Gyms and contests where you exceeded the division rating limit"
             >
-              {includeUnrated ? 'Hide Unrated' : 'Show Unrated'}
+              {includeUnrated ? 'Hide Ineligible' : 'Show Ineligible'}
             </button>
           )}
           <button

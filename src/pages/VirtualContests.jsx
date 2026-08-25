@@ -16,7 +16,10 @@ import {
   getHandle, 
   setHandle as saveHandleToStorage,
   getLastSyncTime,
-  clearCache
+  clearCache,
+  setCachedVirtualContests,
+  setCachedRatingHistory,
+  setCachedAllSolved
 } from '../services/storageService.js';
 import { getContestType } from '../utils/contest.js';
 import { formatDateTime } from '../utils/dates.js';
@@ -84,9 +87,17 @@ function VirtualContests() {
     fetchData(newHandle, true);
   };
 
-  const handleRefresh = async () => {
+  const handleForceRefresh = async () => {
     if (!handle) return;
-    fetchData(handle, true);
+    try {
+      await setCachedVirtualContests(handle, null);
+      await setCachedRatingHistory(handle, null);
+      await setCachedAllSolved(handle, null);
+      setContests([]);
+      fetchData(handle, true);
+    } catch (e) {
+      setError('Failed to force refresh data: ' + (e.message || e));
+    }
   };
 
   const handleClearData = async () => {
@@ -326,7 +337,7 @@ function VirtualContests() {
           />
         )}
         
-        {error && <ErrorState error={error} onRetry={handleRefresh} />}
+        {error && <ErrorState error={error} onRetry={handleForceRefresh} />}
         
         {!loading && !error && contests.length > 0 && (
           <>
@@ -354,8 +365,8 @@ function VirtualContests() {
               <div style={{ fontSize: '1.1rem', color: '#888' }}>
                 Last synced: {lastSync ? formatDateTime(Math.floor(lastSync / 1000)) : 'Never'}
                 {' '}
-                <button className="cf-btn" onClick={handleRefresh} style={{ marginLeft: '6px' }} title="Scan Codeforces for new contests and activity">
-                  Refresh
+                <button className="cf-btn" onClick={handleForceRefresh} style={{ marginLeft: '6px' }} title="Delete current handle's data and completely rebuild the graph">
+                  Force Refresh
                 </button>
                 <button
                   className="cf-btn"

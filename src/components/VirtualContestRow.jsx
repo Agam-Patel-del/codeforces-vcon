@@ -29,6 +29,13 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
         </span>
       );
     }
+    if (contest.isIneligible) {
+      return (
+        <span className="unrated-subtext" title="Ineligible for rating change due to division limit">
+          (ineligible)
+        </span>
+      );
+    }
     return null;
   };
 
