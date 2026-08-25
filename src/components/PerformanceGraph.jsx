@@ -20,6 +20,7 @@ function PerformanceGraph({ contests }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const [showGraph, setShowGraph] = useState(true);
+  const [includeUnrated, setIncludeUnrated] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [pinnedPoint, setPinnedPoint] = useState(null);
   const hideTimerRef = useRef(null);
@@ -28,8 +29,9 @@ function PerformanceGraph({ contests }) {
   const dataPoints = useMemo(() => {
     return (contests || [])
       .filter(c => c.performanceRating != null && typeof c.performanceRating === 'number')
+      .filter(c => includeUnrated || !c.isUnrated)
       .sort((a, b) => (a.virtualStartTime || 0) - (b.virtualStartTime || 0));
-  }, [contests]);
+  }, [contests, includeUnrated]);
 
   const activePoint = hoveredPoint || pinnedPoint;
 
@@ -301,13 +303,25 @@ function PerformanceGraph({ contests }) {
     <div className="roundbox borderTopRound borderBottomRound" style={{ overflow: 'visible' }}>
       <div className="caption titled" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '0.5em', paddingTop: '0.3em' }}>
         <span>{"\u2192"} Performance Graph</span>
-        <button
-          className="cf-btn"
-          onClick={() => setShowGraph(!showGraph)}
-          style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
-        >
-          {showGraph ? 'Hide' : 'Show'}
-        </button>
+        <div>
+          {showGraph && (
+            <button
+              className="cf-btn"
+              onClick={() => setIncludeUnrated(!includeUnrated)}
+              style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
+              title="Toggle unrated contests in graph"
+            >
+              {includeUnrated ? 'Hide Unrated' : 'Show Unrated'}
+            </button>
+          )}
+          <button
+            className="cf-btn"
+            onClick={() => setShowGraph(!showGraph)}
+            style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
+          >
+            {showGraph ? 'Hide' : 'Show'}
+          </button>
+        </div>
       </div>
 
       {showGraph && (

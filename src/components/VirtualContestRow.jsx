@@ -22,7 +22,7 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
   };
 
   const renderBadge = () => {
-    if (contest.isUnrated || contest.participationType === 'unrated') {
+    if (contest.participationType === 'unrated') {
       return (
         <span className="unrated-subtext" title="Out of Competition / Unrated Live">
           (unrated)
