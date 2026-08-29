@@ -328,8 +328,16 @@ async function loadOrDiscoverContests(handle) {
   
   const merged = [];
   let unenrichedCount = 0;
+  const nowSeconds = Math.floor(Date.now() / 1000);
 
   for (const v of discovered) {
+    const contestInfo = contestMap.get(v.contestId) || gymMetadata[v.contestId] || null;
+    const durationSeconds = contestInfo ? contestInfo.durationSeconds : 0;
+    
+    if (durationSeconds > 0 && nowSeconds < v.virtualStartTime + durationSeconds) {
+      continue; // Skip unfinished virtual contests
+    }
+
     const key = getVirtualContestKey(v.contestId, v.virtualStartTime);
     const existing = cachedMap.get(key);
 
