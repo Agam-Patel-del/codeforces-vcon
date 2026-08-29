@@ -13,12 +13,25 @@ class CodeforcesApiError extends Error {
 const inFlightRequests = new Map();
 
 // Rate limiting
-const RATE_LIMIT_MS = 1000;
+const RATE_LIMIT_MS = 350;
 let lastRequestTime = 0;
-let requestQueue = Promise.resolve();
+let tokenQueue = Promise.resolve();
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function acquireToken() {
+  const p = tokenQueue.then(async () => {
+    const now = Date.now();
+    const timeToWait = Math.max(0, lastRequestTime + RATE_LIMIT_MS - now);
+    if (timeToWait > 0) {
+      await delay(timeToWait);
+    }
+    lastRequestTime = Date.now();
+  });
+  tokenQueue = p.catch(() => {});
+  return p;
 }
 
 async function fetchApi(endpoint, params = {}) {
@@ -34,29 +47,52 @@ async function fetchApi(endpoint, params = {}) {
     return inFlightRequests.get(urlString);
   }
 
-  const executeRequest = async () => {
-    const now = Date.now();
-    const timeToWait = Math.max(0, lastRequestTime + RATE_LIMIT_MS - now);
-    if (timeToWait > 0) {
-      await delay(timeToWait);
-    }
-    lastRequestTime = Date.now();
+  const executeRequest = async (retries = 3) => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      await acquireToken();
 
-    try {
-      const response = await fetch(urlString);
-      const data = await response.json();
-      
-      if (data.status !== 'OK') {
-        throw new CodeforcesApiError(data.status, data.comment);
+      try {
+        const response = await fetch(urlString);
+        
+        // Handle Cloudflare 503 or HTML response on rate limit
+        if (!response.ok) {
+          if (response.status === 503 || response.status === 429) {
+            if (attempt < retries) {
+              await delay(2000); // Wait 2s before retry
+              continue;
+            }
+          }
+        }
+        
+        const text = await response.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          if (attempt < retries) {
+            await delay(2000);
+            continue;
+          }
+          throw new Error('Invalid JSON response from Codeforces API');
+        }
+        
+        if (data.status !== 'OK') {
+          throw new CodeforcesApiError(data.status, data.comment);
+        }
+        return data.result;
+      } catch (err) {
+        if (attempt === retries || err instanceof CodeforcesApiError) {
+          throw err;
+        }
+        await delay(2000);
       }
-      return data.result;
-    } finally {
-      inFlightRequests.delete(urlString);
     }
   };
 
-  const requestPromise = requestQueue.then(() => executeRequest());
-  requestQueue = requestPromise.catch(() => {});
+  const requestPromise = executeRequest().finally(() => {
+    inFlightRequests.delete(urlString);
+  });
+  
   inFlightRequests.set(urlString, requestPromise);
 
   return requestPromise;

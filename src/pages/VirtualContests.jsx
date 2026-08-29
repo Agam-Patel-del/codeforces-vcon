@@ -235,6 +235,9 @@ function VirtualContests() {
     let isMounted = true;
 
     const runProgressiveEnrichment = async () => {
+      let activePromises = [];
+      const CONCURRENCY_LIMIT = 4;
+
       while (isMounted) {
         let visibleUnenriched = (paginatedContestsRef.current || []).filter(c => c.isEnriched === false || c.rank == null);
         let toProcess = visibleUnenriched.find(c => !enrichingRef.current.has(c.key));
@@ -245,27 +248,45 @@ function VirtualContests() {
         }
 
         if (!toProcess) {
+          if (activePromises.length > 0) {
+            await Promise.race(activePromises);
+            continue;
+          }
           await new Promise(r => setTimeout(r, 500));
           continue;
         }
 
         enrichingRef.current.add(toProcess.key);
-        try {
-          const enriched = await enrichSingleContest(handle, toProcess, contestMapRef.current);
-          if (isMounted && enriched) {
-            batchedUpdatesRef.current.push(enriched);
-            if (!batchTimeoutRef.current) {
-              batchTimeoutRef.current = setTimeout(() => {
-                applyBatchedUpdates();
-                batchTimeoutRef.current = null;
-              }, 500); // UI update batching
+        
+        const enrichPromise = (async () => {
+          try {
+            const enriched = await enrichSingleContest(handle, toProcess, contestMapRef.current);
+            if (isMounted && enriched) {
+              batchedUpdatesRef.current.push(enriched);
+              if (!batchTimeoutRef.current) {
+                batchTimeoutRef.current = setTimeout(() => {
+                  applyBatchedUpdates();
+                  batchTimeoutRef.current = null;
+                }, 500);
+              }
             }
+          } catch (e) {
+            console.warn(`Failed to enrich contest ${toProcess.contestId}:`, e);
           }
-        } catch (e) {
-          console.warn(`Failed to enrich contest ${toProcess.contestId}:`, e);
+        })();
+
+        activePromises.push(enrichPromise);
+        
+        // Clean up finished promises
+        enrichPromise.finally(() => {
+          activePromises = activePromises.filter(p => p !== enrichPromise);
+        });
+
+        if (activePromises.length >= CONCURRENCY_LIMIT) {
+          await Promise.race(activePromises);
         }
 
-        await new Promise(r => setTimeout(r, 200)); // Gentle rate-limit pause
+        await new Promise(r => setTimeout(r, 20)); // tiny yield
       }
     };
 
