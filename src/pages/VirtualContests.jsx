@@ -167,6 +167,10 @@ function VirtualContests() {
           return (b.virtualStartTime || 0) - (a.virtualStartTime || 0);
         case 'oldest':
           return (a.virtualStartTime || 0) - (b.virtualStartTime || 0);
+        case 'contest-newest':
+          return (b.contestStartTime || 0) - (a.contestStartTime || 0);
+        case 'contest-oldest':
+          return (a.contestStartTime || 0) - (b.contestStartTime || 0);
         case 'best-rank':
           valA = a.rank || Infinity;
           valB = b.rank || Infinity;
@@ -186,6 +190,14 @@ function VirtualContests() {
         case 'lowest-delta':
           valA = a.predictedRatingDelta ?? Infinity;
           valB = b.predictedRatingDelta ?? Infinity;
+          return valA - valB;
+        case 'best-perf':
+          valA = a.performanceRating ?? -Infinity;
+          valB = b.performanceRating ?? -Infinity;
+          return valB - valA;
+        case 'worst-perf':
+          valA = a.performanceRating ?? Infinity;
+          valB = b.performanceRating ?? Infinity;
           return valA - valB;
         default:
           return 0;
@@ -362,7 +374,7 @@ function VirtualContests() {
         
         {!loading && !error && contests.length > 0 && (
           <>
-            <PerformanceGraph contests={sortedByDate} />
+            <PerformanceGraph contests={sortedContests} sort={sort} />
             
              <VirtualContestTable 
                contests={paginatedContests} 

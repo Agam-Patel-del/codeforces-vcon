@@ -7,12 +7,16 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
     const reverseMap = {
       'newest': 'oldest',
       'oldest': 'newest',
+      'contest-newest': 'contest-oldest',
+      'contest-oldest': 'contest-newest',
       'best-rank': 'worst-rank',
       'worst-rank': 'best-rank',
       'most-solved': 'least-solved',
       'least-solved': 'most-solved',
       'highest-delta': 'lowest-delta',
-      'lowest-delta': 'highest-delta'
+      'lowest-delta': 'highest-delta',
+      'best-perf': 'worst-perf',
+      'worst-perf': 'best-perf'
     };
     if (sort === reverseMap[currentSortType]) return ' \u25BC';
     return '';
@@ -27,12 +31,16 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
     const reverseMap = {
       'newest': 'oldest',
       'oldest': 'newest',
+      'contest-newest': 'contest-oldest',
+      'contest-oldest': 'contest-newest',
       'best-rank': 'worst-rank',
       'worst-rank': 'best-rank',
       'most-solved': 'least-solved',
       'least-solved': 'most-solved',
       'highest-delta': 'lowest-delta',
-      'lowest-delta': 'highest-delta'
+      'lowest-delta': 'highest-delta',
+      'best-perf': 'worst-perf',
+      'worst-perf': 'best-perf'
     };
     if (sort === reverseMap[currentSortType]) return 'sort-desc';
     return '';
@@ -90,7 +98,13 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
             <tr>
               <th className="top" style={{ width: '30px' }}>#</th>
               <th className="left top">Contest</th>
-              <th className="top" style={{ width: '85px' }}>Contest Date</th>
+              <th
+                className={`top ${getHeaderClass('contest-newest')}`}
+                style={{ width: '85px' }}
+                onClick={() => handleHeaderClick(sort === 'contest-newest' ? 'contest-oldest' : 'contest-newest')}
+              >
+                Contest Date{getSortIndicator('contest-newest') || getSortIndicator('contest-oldest')}
+              </th>
               <th
                 className={`top ${getHeaderClass('newest')}`}
                 style={{ width: '95px' }}
@@ -111,7 +125,12 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
                 Solved{getSortIndicator('most-solved') || getSortIndicator('least-solved')}
               </th>
               <th className="top">Rating Change</th>
-              <th className="top">Performance</th>
+              <th
+                className={`top ${getHeaderClass('best-perf')}`}
+                onClick={() => handleHeaderClick(sort === 'best-perf' ? 'worst-perf' : 'best-perf')}
+              >
+                Performance{getSortIndicator('best-perf') || getSortIndicator('worst-perf')}
+              </th>
               <th
                 className={`top ${getHeaderClass('highest-delta')}`}
                 onClick={() => handleHeaderClick(sort === 'highest-delta' ? 'lowest-delta' : 'highest-delta')}

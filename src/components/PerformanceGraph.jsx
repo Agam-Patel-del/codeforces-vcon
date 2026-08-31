@@ -16,10 +16,9 @@ const getRatingColor = (rating) => {
 
 const HIDE_DELAY_MS = 1000;
 
-function PerformanceGraph({ contests }) {
+function PerformanceGraph({ contests, sort }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const [showGraph, setShowGraph] = useState(true);
   const [includeUnrated, setIncludeUnrated] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [pinnedPoint, setPinnedPoint] = useState(null);
@@ -27,10 +26,11 @@ function PerformanceGraph({ contests }) {
   const pointsRef = useRef([]);
 
   const dataPoints = useMemo(() => {
-    return (contests || [])
+    let pts = (contests || [])
       .filter(c => c.performanceRating != null && typeof c.performanceRating === 'number')
-      .filter(c => includeUnrated || !c.isUnrated)
-      .sort((a, b) => (a.virtualStartTime || 0) - (b.virtualStartTime || 0));
+      .filter(c => includeUnrated || !c.isUnrated);
+
+    return pts;
   }, [contests, includeUnrated]);
 
   const activePoint = hoveredPoint || pinnedPoint;
@@ -57,7 +57,7 @@ function PerformanceGraph({ contests }) {
   }, []);
 
   useEffect(() => {
-    if (!showGraph || dataPoints.length < 2 || !canvasRef.current || !containerRef.current) return;
+    if (dataPoints.length < 2 || !canvasRef.current || !containerRef.current) return;
 
     const renderGraph = () => {
       const canvas = canvasRef.current;
@@ -124,9 +124,8 @@ function PerformanceGraph({ contests }) {
       }
       ctx.setLineDash([]);
 
-      // Plot points
       const points = dataPoints.map((d, i) => {
-        const x = padding.left + (i / (dataPoints.length - 1)) * plotWidth;
+        const x = padding.left + ((dataPoints.length - 1 - i) / (dataPoints.length - 1)) * plotWidth;
         const y = padding.top + (1 - (d.performanceRating - minRating) / ratingRange) * plotHeight;
         return { x, y, rating: d.performanceRating, contest: d };
       });
@@ -173,7 +172,7 @@ function PerformanceGraph({ contests }) {
     return () => {
       window.removeEventListener('resize', renderGraph);
     };
-  }, [dataPoints, showGraph, activePoint, pinnedPoint]);
+  }, [dataPoints, activePoint, pinnedPoint]);
 
   const findNearestPoint = (e, maxDistance = 20) => {
     if (!canvasRef.current || pointsRef.current.length === 0) return null;
@@ -304,36 +303,26 @@ function PerformanceGraph({ contests }) {
       <div className="caption titled" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '0.5em', paddingTop: '0.3em' }}>
         <span>{"\u2192"} Performance Graph</span>
         <div>
-          {showGraph && (
-            <button
-              className="cf-btn"
-              onClick={() => setIncludeUnrated(!includeUnrated)}
-              style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
-              title="Toggle Gyms and contests where you exceeded the division rating limit"
-            >
-              {includeUnrated ? 'Hide Ineligible' : 'Show Ineligible'}
-            </button>
-          )}
           <button
             className="cf-btn"
-            onClick={() => setShowGraph(!showGraph)}
+            onClick={() => setIncludeUnrated(!includeUnrated)}
             style={{ padding: '1px 8px', fontSize: '1.1rem', marginRight: '6px' }}
+            title="Toggle Gyms and contests where you exceeded the division rating limit"
           >
-            {showGraph ? 'Hide' : 'Show'}
+            {includeUnrated ? 'Hide Ineligible' : 'Show Ineligible'}
           </button>
         </div>
       </div>
 
-      {showGraph && (
-        <div style={{ padding: '8px' }}>
-          <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '280px' }}>
-            <canvas 
-              ref={canvasRef} 
-              style={{ display: 'block', width: '100%', height: '280px' }}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              onClick={handleCanvasClick}
-            />
+      <div style={{ padding: '8px' }}>
+        <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '280px' }}>
+          <canvas 
+            ref={canvasRef} 
+            style={{ display: 'block', width: '100%', height: '280px' }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleCanvasClick}
+          />
             {activePoint && (
               <div 
                 style={getCardStyle()}
@@ -402,7 +391,6 @@ function PerformanceGraph({ contests }) {
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

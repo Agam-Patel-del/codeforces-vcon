@@ -102,14 +102,18 @@ function ContestFilters({
             onChange={(e) => onSortChange(e.target.value)}
             style={{ maxWidth: '17em' }}
           >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
+            <option value="newest">Participation Date (Newest)</option>
+            <option value="oldest">Participation Date (Oldest)</option>
+            <option value="contest-newest">Original Date (Newest)</option>
+            <option value="contest-oldest">Original Date (Oldest)</option>
             <option value="best-rank">Best Rank</option>
             <option value="worst-rank">Worst Rank</option>
             <option value="most-solved">Most Solved</option>
             <option value="least-solved">Least Solved</option>
             <option value="highest-delta">Highest &Delta;</option>
             <option value="lowest-delta">Lowest &Delta;</option>
+            <option value="best-perf">Best Performance</option>
+            <option value="worst-perf">Worst Performance</option>
           </select>
         </div>
 
