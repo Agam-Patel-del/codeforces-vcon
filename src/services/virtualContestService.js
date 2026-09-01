@@ -241,7 +241,7 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
       }
     }
     
-    predictedRatingDelta = 0;
+    predictedRatingDelta = null;
     predictedRatingAfter = ratingBefore;
 
     if (virtualRank > 0 && !isUnratedByDivision) {

@@ -68,16 +68,17 @@ async function getRatedContestCountAtTime(handle, timestamp) {
 async function fetchContestRatingChanges(contestId) {
   let ratingChanges = await storage.getCachedContestRatingChanges(contestId);
 
-  // Re-fetch if cache is missing rank data (legacy cache format)
+  // Re-fetch if cache is missing rank data or newRating (legacy cache format)
   const needsRefresh = ratingChanges
     && ratingChanges.length > 0
-    && ratingChanges[0].rank === undefined;
+    && (ratingChanges[0].rank === undefined || ratingChanges[0].newRating === undefined);
 
   if (!ratingChanges || needsRefresh) {
     try {
       const fullChanges = await api.getContestRatingChanges(contestId);
       ratingChanges = fullChanges.map(rc => ({
         oldRating: rc.oldRating,
+        newRating: rc.newRating,
         rank: rc.rank
       }));
       await storage.setCachedContestRatingChanges(contestId, ratingChanges);
@@ -133,7 +134,12 @@ async function predictRatingDelta(handle, contestId, virtualRank, virtualStartTi
   const ratingChanges = await fetchContestRatingChanges(contestId);
 
   if (!ratingChanges || ratingChanges.length === 0) {
-    return { delta: 0, newRating: userRating, confidence: 'estimated', ratingBefore: userRating };
+    return { delta: null, newRating: userRating, confidence: 'estimated', ratingBefore: userRating, performanceRating: null };
+  }
+
+  const hasRealChanges = ratingChanges.some(rc => rc.oldRating !== rc.newRating);
+  if (!hasRealChanges) {
+    return { delta: null, newRating: userRating, confidence: 'unrated', ratingBefore: userRating, performanceRating: null };
   }
 
   const { seeds, adjustment } = buildContestData(ratingChanges, isModernSystem);
@@ -157,6 +163,9 @@ async function getPerformanceRating(contestId, rank, timestamp = Date.now() / 10
   const ratingChanges = await fetchContestRatingChanges(contestId);
 
   if (!ratingChanges || ratingChanges.length === 0) return null;
+
+  const hasRealChanges = ratingChanges.some(rc => rc.oldRating !== rc.newRating);
+  if (!hasRealChanges) return null;
 
   const isModernSystem = timestamp >= MODERN_RATING_SYSTEM_TIMESTAMP;
   const { seeds, adjustment } = buildContestData(ratingChanges, isModernSystem);
