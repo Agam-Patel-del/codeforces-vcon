@@ -31,6 +31,11 @@ console.log('\x1b[1m\x1b[34m========================================\x1b[0m\n');
 if (!skipPull) {
   console.log('\x1b[36m[vcon 1/3]\x1b[0m Pulling latest changes from repository...');
   try {
+    // Revert package-lock.json to avoid pull conflicts if it was modified automatically
+    try {
+      execSync('git checkout -- package-lock.json', { cwd: rootDir, stdio: 'ignore' });
+    } catch (e) {}
+    
     execSync('git pull', { cwd: rootDir, stdio: 'inherit' });
     console.log('\x1b[32m✔ Git pull complete.\x1b[0m\n');
   } catch (err) {
