@@ -28,6 +28,7 @@ function PerformanceGraph({ contests, sort }) {
   const dataPoints = useMemo(() => {
     let pts = (contests || [])
       .filter(c => c.performanceRating != null && typeof c.performanceRating === 'number')
+      .filter(c => !c.isTeam)
       .filter(c => includeUnrated || !c.isUnrated);
 
     return pts;

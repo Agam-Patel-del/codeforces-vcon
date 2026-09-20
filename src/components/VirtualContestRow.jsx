@@ -75,19 +75,33 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
         </a>
       </td>
       <td className="bottom">
-        <span className={getRatingColorClass(ratingBefore)}>{ratingBefore ?? '-'}</span>
-        {' \u2192 '}
-        <span className={getRatingColorClass(contest.predictedRatingAfter)}>{contest.predictedRatingAfter ?? '-'}</span>
+        {contest.isTeam ? (
+          <span style={{ color: '#888' }}>-</span>
+        ) : (
+          <>
+            <span className={getRatingColorClass(ratingBefore)}>{ratingBefore ?? '-'}</span>
+            {' \u2192 '}
+            <span className={getRatingColorClass(contest.predictedRatingAfter)}>{contest.predictedRatingAfter ?? '-'}</span>
+          </>
+        )}
       </td>
       <td className="bottom">
-        <span className={getRatingColorClass(contest.performanceRating)}>
-          {contest.performanceRating != null ? Math.round(contest.performanceRating) : '-'}
-        </span>
+        {contest.isTeam ? (
+          <span style={{ color: '#888' }}>-</span>
+        ) : (
+          <span className={getRatingColorClass(contest.performanceRating)}>
+            {contest.performanceRating != null ? Math.round(contest.performanceRating) : '-'}
+          </span>
+        )}
       </td>
       <td className="bottom">
-        <span className={getDeltaClass(predictedRatingDelta)}>
-          {predictedRatingDelta != null ? formatDelta(predictedRatingDelta) : '-'}
-        </span>
+        {contest.isTeam ? (
+          <span style={{ color: '#888' }}>-</span>
+        ) : (
+          <span className={getDeltaClass(predictedRatingDelta)}>
+            {predictedRatingDelta != null ? formatDelta(predictedRatingDelta) : '-'}
+          </span>
+        )}
       </td>
     </tr>
   );

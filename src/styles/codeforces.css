@@ -864,6 +864,16 @@ select.cf-input {
     vertical-align: baseline;
 }
 
+/* ---- Team Subtext ---- */
+.team-subtext {
+    font-size: 11px;
+    font-family: verdana, arial, sans-serif;
+    color: #2563eb;
+    font-weight: normal;
+    margin-left: 5px;
+    vertical-align: baseline;
+}
+
 /* ---- Multi-Select Filter Chips ---- */
 .filter-chips-container {
     display: flex;

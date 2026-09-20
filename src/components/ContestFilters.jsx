@@ -53,6 +53,7 @@ function ContestFilters({
             <option value="virtual">Virtual Only</option>
             <option value="virtual-no-gym">Virtual (without Gym)</option>
             <option value="unrated">Unrated (Live) Only</option>
+            <option value="team">Team Only</option>
             <option value="gym">Gym Only</option>
           </select>
         </div>

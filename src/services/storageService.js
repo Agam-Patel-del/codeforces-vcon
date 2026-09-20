@@ -3,7 +3,7 @@ const KEYS = {
   AUTH_HANDLE: 'cf_auth_handle',
   CONTEST_LIST: 'cf_contest_list',
   GYM_METADATA: 'cf_gym_metadata',
-  VIRTUAL_CONTESTS: 'cf_virtual_contests_v5',
+  VIRTUAL_CONTESTS: 'cf_virtual_contests_v3',
   RATING_HISTORY: 'cf_rating_history',
   CONTEST_RATING_CHANGES: 'cf_rating_changes_v3',
   LAST_SYNC: 'cf_last_sync',

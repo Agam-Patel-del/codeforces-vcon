@@ -54,6 +54,7 @@ function VirtualContestTable({ contests, sort, handle, onSortChange, onContestCl
   const getDateColumnLabel = () => {
     if (typeFilter === 'virtual' || typeFilter === 'virtual-no-gym') return 'Virtual Date';
     if (typeFilter === 'unrated') return 'Contest Date';
+    if (typeFilter === 'team') return 'Contest Date';
     return 'Participation Date';
   };
 

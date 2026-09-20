@@ -8,7 +8,8 @@ function formatTitle(title) {
 
 function ContestStats({ contests }) {
   const stats = useMemo(() => {
-    if (!contests || contests.length === 0) {
+    const soloContests = (contests || []).filter(c => !c.isTeam);
+    if (soloContests.length === 0) {
       return {
         count: 0,
         totalSolved: 0,
@@ -24,7 +25,7 @@ function ContestStats({ contests }) {
       };
     }
 
-    const count = contests.length;
+    const count = soloContests.length;
     let totalSolved = 0;
     let sumRank = 0;
     let validRanks = 0;
@@ -34,7 +35,7 @@ function ContestStats({ contests }) {
     let sumPerf = 0;
     let validPerfs = 0;
 
-    contests.forEach(c => {
+    soloContests.forEach(c => {
       totalSolved += (c.solvedCount || 0);
 
       if (c.rank != null && c.rank > 0) {
@@ -60,7 +61,7 @@ function ContestStats({ contests }) {
     const overallAvgPerf = validPerfs > 0 ? (sumPerf / validPerfs) : null;
 
     // Calculate Last 5 Contests Performance
-    const sortedByDatePerf = [...contests]
+    const sortedByDatePerf = [...soloContests]
       .filter(c => c.performanceRating != null && typeof c.performanceRating === 'number')
       .sort((a, b) => (b.virtualStartTime || 0) - (a.virtualStartTime || 0));
 
@@ -77,7 +78,7 @@ function ContestStats({ contests }) {
     }
 
     // Calculate Last 5 Contests Average Rank
-    const sortedByDateRank = [...contests]
+    const sortedByDateRank = [...soloContests]
       .filter(c => c.rank != null && c.rank > 0)
       .sort((a, b) => (b.virtualStartTime || 0) - (a.virtualStartTime || 0));
 
@@ -88,10 +89,8 @@ function ContestStats({ contests }) {
     if (last5RankList.length > 0) {
       const sumLast5Rank = last5RankList.reduce((acc, c) => acc + c.rank, 0);
       last5AvgRank = Math.round(sumLast5Rank / last5RankList.length);
-      if (validRanks > 0) {
-        // Lower rank is better: diff = overallAvgRank - last5AvgRank (positive means improved rank)
+      if (validRanks > 0) 
         rankTrendDiff = Math.round(avgRank) - last5AvgRank;
-      }
     }
 
     return {

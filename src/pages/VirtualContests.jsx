@@ -124,10 +124,12 @@ function VirtualContests() {
       const pType = c.participationType || (c.isUnrated ? 'unrated' : 'virtual');
 
       // Participation type filter
+      if (c.isTeam && typeFilter !== 'team') return false;
       if (typeFilter === 'all-no-gym' && isGym) return false;
       if (typeFilter === 'virtual' && pType !== 'virtual') return false;
       if (typeFilter === 'virtual-no-gym' && (pType !== 'virtual' || isGym)) return false;
       if (typeFilter === 'unrated' && pType !== 'unrated') return false;
+      if (typeFilter === 'team' && !c.isTeam) return false;
       if (typeFilter === 'gym' && !isGym) return false;
 
       // Division filter
@@ -327,7 +329,9 @@ function VirtualContests() {
       case 'virtual': return 'Virtual Contests History';
       case 'virtual-no-gym': return 'Virtual Contests (without Gym)';
       case 'all-no-gym': return 'Contests History (without Gym)';
+      case 'solo': return 'Solo Contests History';
       case 'unrated': return 'Unrated Contests History';
+      case 'team': return 'Team Contests History';
       case 'gym': return 'Gym Contests History';
       default: return 'Virtual & Unrated Contests History';
     }

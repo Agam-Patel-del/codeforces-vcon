@@ -23,10 +23,18 @@ async function discoverVirtualContests(handle) {
     const vStartTime = sub.author.startTimeSeconds || sub.creationTimeSeconds;
     const key = getVirtualContestKey(sub.contestId, vStartTime);
     if (!groups.has(key)) {
+      const isTeam = Boolean(
+        sub.author.teamId ||
+        sub.author.teamName ||
+        (sub.author.members && sub.author.members.length > 1)
+      );
       groups.set(key, {
         contestId: sub.contestId,
         virtualStartTime: vStartTime,
         participationType: sub.author.participantType === 'OUT_OF_COMPETITION' ? 'unrated' : 'virtual',
+        isTeam,
+        teamName: sub.author.teamName || null,
+        teamMembers: (sub.author.members || []).map(m => m.handle),
         submissions: []
       });
     }
@@ -38,6 +46,7 @@ async function discoverVirtualContests(handle) {
 
 function createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata = {}) {
   const isGym = v.contestId >= 100000;
+  const isTeam = v.isTeam || false;
   const contestInfo = contestMap ? contestMap.get(v.contestId) : (gymMetadata[v.contestId] || null);
   const okIndices = new Set(
     (v.submissions || []).filter(s => s.verdict === 'OK').map(s => s.problem.index)
@@ -63,12 +72,15 @@ function createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata = {
     predictedRatingDelta: null,
     predictedRatingAfter: null,
     performanceRating: null,
-    ratingConfidence: isGym ? 'unrated' : 'estimating',
+    ratingConfidence: (isGym || isTeam) ? 'unrated' : 'estimating',
     contestType: getContestType(contestName, v.contestId),
     participationType: v.participationType || (isGym ? 'unrated' : 'virtual'),
     isOfficial: false,
-    isUnrated: isGym,
+    isUnrated: isGym || isTeam,
     isIneligible: false,
+    isTeam,
+    teamName: v.teamName || null,
+    teamMembers: v.teamMembers || [],
     contestUrl: getContestUrl(v.contestId),
     virtualStandingsUrl: getVirtualStandingsUrl(v.contestId),
     submissions: v.submissions || [],
@@ -77,7 +89,7 @@ function createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata = {
   };
 }
 
-async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap, participationType = 'virtual') {
+async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap, participationType = 'virtual', { isTeam = false, teamName = null, teamMembers = [] } = {}) {
   const isGym = contestId >= 100000;
   const contestInfo = contestMap ? contestMap.get(contestId) : null;
   
@@ -212,13 +224,12 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
   let predictedRatingDelta = null;
   let predictedRatingAfter = null;
   let performanceRating = null;
-  let ratingConfidence = isGym ? 'unrated' : 'estimated';
+  let ratingConfidence = (isGym || isTeam) ? 'unrated' : 'estimated';
   let isUnratedByDivision = false;
 
-  if (!isGym) {
+  if (!isGym && !isTeam) {
     ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
     
-    // Determine if the user's rating exceeds the threshold for the contest division
     if (resolvedContestType === 'div3' && ratingBefore >= 1600) {
       isUnratedByDivision = true;
     } else if (resolvedContestType === 'div4' && ratingBefore >= 1400) {
@@ -290,8 +301,11 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
     contestType: resolvedContestType,
     participationType,
     isOfficial: false,
-    isUnrated: isGym || isUnratedByDivision,
+    isUnrated: isGym || isUnratedByDivision || isTeam,
     isIneligible: isUnratedByDivision,
+    isTeam,
+    teamName,
+    teamMembers,
     contestUrl: getContestUrl(contestId),
     virtualStandingsUrl: getVirtualStandingsUrl(contestId),
     fetchedAt: Math.floor(Date.now() / 1000),
@@ -300,10 +314,6 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
   };
 }
 
-/**
- * Discovers virtual contests and merges with existing cache instantly (0.3s).
- * Any contest not yet enriched is returned in lightweight format so the UI renders immediately.
- */
 async function loadOrDiscoverContests(handle) {
   const cachedData = await storage.getCachedVirtualContests(handle) || [];
   const cachedMap = new Map(cachedData.map(c => [c.key, c]));
@@ -399,7 +409,8 @@ async function enrichSingleContest(handle, contestObj, contestMap) {
     contestObj.submissions || [],
     handle,
     contestMap,
-    contestObj.participationType
+    contestObj.participationType,
+    { isTeam: contestObj.isTeam || false, teamName: contestObj.teamName || null, teamMembers: contestObj.teamMembers || [] }
   );
 
   // Update storage safely and incrementally batched

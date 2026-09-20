@@ -104,31 +104,81 @@ function ContestDetailsPage({ contestId, virtualStartTime }) {
                 <tr>
                   <td className="label-col">Rating:</td>
                   <td>
-                    <span className={getRatingColorClass(contest.ratingBefore)}>{contest.ratingBefore || '-'}</span>
-                    {' \u2192 '}
-                    <span className={getRatingColorClass(contest.predictedRatingAfter)}>{contest.predictedRatingAfter || '-'}</span>
+                    {contest.isTeam ? (
+                      <span style={{ color: '#888' }}>-</span>
+                    ) : (
+                      <>
+                        <span className={getRatingColorClass(contest.ratingBefore)}>{contest.ratingBefore || '-'}</span>
+                        {' \u2192 '}
+                        <span className={getRatingColorClass(contest.predictedRatingAfter)}>{contest.predictedRatingAfter || '-'}</span>
+                      </>
+                    )}
                   </td>
                 </tr>
                 <tr>
                   <td className="label-col">Performance:</td>
                   <td>
-                    <span className={getRatingColorClass(contest.performanceRating)}>
-                      {contest.performanceRating != null ? Math.round(contest.performanceRating) : '-'}
-                    </span>
+                    {contest.isTeam ? (
+                      <span style={{ color: '#888' }}>-</span>
+                    ) : (
+                      <span className={getRatingColorClass(contest.performanceRating)}>
+                        {contest.performanceRating != null ? Math.round(contest.performanceRating) : '-'}
+                      </span>
+                    )}
                   </td>
                 </tr>
                 <tr>
                   <td className="label-col">Delta:</td>
                   <td>
-                    <span className={getDeltaClass(contest.predictedRatingDelta)}>
-                      {contest.predictedRatingDelta != null ? formatDelta(contest.predictedRatingDelta) : '-'}
-                    </span>
+                    {contest.isTeam ? (
+                      <span style={{ color: '#888' }}>-</span>
+                    ) : (
+                      <span className={getDeltaClass(contest.predictedRatingDelta)}>
+                        {contest.predictedRatingDelta != null ? formatDelta(contest.predictedRatingDelta) : '-'}
+                      </span>
+                    )}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+
+        {contest.isTeam && (
+          <div className="roundbox borderTopRound borderBottomRound" style={{ marginTop: '1.5em' }}>
+            <div className="caption titled">
+              &rarr; Team Roster
+              <div className="top-links"></div>
+            </div>
+            <div className="roundbox-content">
+              {contest.teamName && (
+                <div className="stat-row" style={{ marginBottom: '6px' }}>
+                  <span className="stat-label">Team:</span>
+                  <span className="stat-value" style={{ fontWeight: 'bold' }}>{contest.teamName}</span>
+                </div>
+              )}
+              {contest.teamMembers && contest.teamMembers.length > 0 && (
+                <div className="stat-row">
+                  <span className="stat-label">Members:</span>
+                  <span className="stat-value">
+                    {contest.teamMembers.map((member, i) => (
+                      <span key={member}>
+                        {i > 0 && ', '}
+                        <a
+                          href={`https://codeforces.com/profile/${member}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {member}
+                        </a>
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="roundbox borderTopRound borderBottomRound" style={{ marginTop: '1.5em' }}>
           <div className="caption titled">
