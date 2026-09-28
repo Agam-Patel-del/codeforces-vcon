@@ -8,7 +8,7 @@ function manifestPlugin(targetBrowser = 'chrome') {
     generateBundle() {
       const manifest = {
         manifest_version: 3,
-        name: 'Codeforces Virtual Contests',
+        name: 'Codeforces Vcon',
         version: '1.0.0',
         description: 'View your complete Codeforces virtual contest history with predicted rating changes.',
         icons: {
@@ -47,7 +47,7 @@ function manifestPlugin(targetBrowser = 'chrome') {
         };
         manifest.browser_specific_settings = {
           gecko: {
-            id: 'cf-virtual-contests@agam-patel',
+            id: 'cf-virtual-contests@hatch-glide',
             strict_min_version: '109.0'
           }
         };
