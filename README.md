@@ -1,11 +1,10 @@
 # Codeforces-Vcon
 
-**Codeforces-Vcon** is a browser extension for **Google Chrome** and **Mozilla Firefox** that integrates a dedicated virtual contest history and performance analytics interface directly into Codeforces. It enables competitive programmers to track, analyze, and visualize their performance across virtual and unrated practice contests with an authentic user interface.
+**Codeforces-Vcon** is a browser extension for **Chromium-based (Google Chrome)** and **Gecko-based (Mozilla Firefox)** web browsers. It integrates a dedicated virtual contest history and performance analytics interface directly into Codeforces. It enables competitive programmers to track, analyze, and visualize their performance across virtual and unrated practice contests with an authentic user interface.
 
 ---
 
 ## Features
-
 * **Authentic Codeforces Interface:**
   * Injects a seamless `VIRTUALS` navigation tab into the Codeforces top navbar.
 
