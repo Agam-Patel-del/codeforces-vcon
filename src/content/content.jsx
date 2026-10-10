@@ -9,16 +9,34 @@
   
   function detectHandle() {
     try {
-      const langChooser = document.querySelector('.lang-chooser');
-      if (langChooser) {
-        const hasLogout = !!langChooser.querySelector('a[href*="logout"], a[href*="Logout"]');
-        if (hasLogout) {
-          const profileLink = langChooser.querySelector('a[href^="/profile/"]');
+      const headerOrLang = document.querySelector('.lang-chooser') || document.querySelector('#header');
+      if (headerOrLang) {
+        const logoutLink = document.querySelector('.lang-chooser a[href*="logout"], #header a[href*="logout"], a[href*="logout"]');
+        if (logoutLink) {
+          const profileLink = document.querySelector('.lang-chooser a[href*="/profile/"], #header a[href*="/profile/"]');
           if (profileLink) {
-            const handle = profileLink.textContent.trim();
-            if (handle && handle !== 'Register' && handle !== 'Enter' && handle !== 'Login') {
-              return handle;
+            let handle = null;
+            const href = profileLink.getAttribute('href') || '';
+            const match = href.match(/\/profile\/([^\/\?#]+)/);
+            if (match) {
+              handle = match[1].trim();
+            } else {
+              handle = profileLink.textContent.trim();
             }
+            if (handle && !['register', 'enter', 'login'].includes(handle.toLowerCase())) {
+              return {
+                handle: handle,
+                userClass: profileLink.className || ''
+              };
+            }
+          }
+        } else {
+          const enterLink = document.querySelector('.lang-chooser a[href*="enter"], #header a[href*="enter"], .lang-chooser a[href*="register"]');
+          if (enterLink) {
+            return {
+              handle: null,
+              userClass: null
+            };
           }
         }
       }
@@ -58,18 +76,34 @@
     }
   }
   
-  function sendHandleToBackground(handle) {
+  function sendAuthToBackground(handle, userClass) {
     if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'HANDLE_DETECTED', handle: handle }).catch(() => {
+      chrome.runtime.sendMessage({ 
+        type: 'HANDLE_DETECTED', 
+        handle: handle, 
+        userClass: userClass 
+      }).catch(() => {
         // Ignore connection errors if background is not listening
       });
     }
   }
   
+  let lastSyncedHandle = undefined;
+  function syncAuth() {
+    const auth = detectHandle();
+    if (auth !== null) {
+      const handle = auth.handle;
+      const userClass = auth.userClass;
+      if (handle !== lastSyncedHandle) {
+        lastSyncedHandle = handle;
+        sendAuthToBackground(handle, userClass);
+      }
+    }
+  }
+
   function init() {
     insertNavItem();
-    const handle = detectHandle();
-    sendHandleToBackground(handle);
+    syncAuth();
   }
   
   if (document.readyState === 'loading') {
@@ -77,11 +111,15 @@
   } else {
     init();
   }
+
+  window.addEventListener('load', syncAuth);
+  window.addEventListener('pageshow', syncAuth);
   
   const observer = new MutationObserver(() => {
     if (!document.getElementById(VIRTUAL_CONTESTS_ID)) {
       insertNavItem();
     }
+    syncAuth();
   });
   
   observer.observe(document.body, {

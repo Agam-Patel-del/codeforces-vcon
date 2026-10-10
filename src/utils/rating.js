@@ -10,6 +10,18 @@ function getRatingColorClass(rating) {
   return 'rating-legendary';
 }
 
+function getUserRankClass(rating) {
+  if (rating === null || rating === undefined) return 'user-gray';
+  if (rating < 1200) return 'user-gray';
+  if (rating < 1400) return 'user-green';
+  if (rating < 1600) return 'user-cyan';
+  if (rating < 1900) return 'user-blue';
+  if (rating < 2100) return 'user-violet';
+  if (rating < 2400) return 'user-orange';
+  if (rating < 2900) return 'user-red';
+  return 'user-legendary';
+}
+
 function getRatingTitle(rating) {
   if (rating === null || rating === undefined) return 'unrated';
   if (rating < 1200) return 'newbie';
@@ -37,7 +49,9 @@ function getDeltaClass(delta) {
 
 export {
   getRatingColorClass,
+  getUserRankClass,
   getRatingTitle,
   formatDelta,
   getDeltaClass
 };
+

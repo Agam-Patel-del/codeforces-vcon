@@ -1,6 +1,7 @@
 const KEYS = {
   HANDLE: 'cf_handle',
   AUTH_HANDLE: 'cf_auth_handle',
+  AUTH_CLASS: 'cf_auth_class',
   CONTEST_LIST: 'cf_contest_list',
   GYM_METADATA: 'cf_gym_metadata',
   VIRTUAL_CONTESTS: 'cf_virtual_contests_v4',
@@ -253,6 +254,69 @@ async function setAuthHandle(handle) {
   return set(KEYS.AUTH_HANDLE, handle);
 }
 
+async function getAuthClass() {
+  const cached = await get(KEYS.AUTH_CLASS);
+  return cached || null;
+}
+
+async function setAuthClass(cls) {
+  return set(KEYS.AUTH_CLASS, cls);
+}
+
+async function syncAuthFromCodeforces() {
+  try {
+    if (typeof fetch === 'undefined') return null;
+    const response = await fetch('https://codeforces.com/', {
+      credentials: 'include',
+      cache: 'no-cache'
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    if (typeof DOMParser === 'undefined') return null;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const langChooser = doc.querySelector('.lang-chooser') || doc.querySelector('#header');
+    if (!langChooser) return null;
+
+    const logoutLink = doc.querySelector('.lang-chooser a[href*="logout"], #header a[href*="logout"], a[href*="logout"]');
+    if (logoutLink) {
+      const profileLink = doc.querySelector('.lang-chooser a[href*="/profile/"], #header a[href*="/profile/"]');
+      if (profileLink) {
+        let handle = null;
+        const href = profileLink.getAttribute('href') || '';
+        const match = href.match(/\/profile\/([^\/\?#]+)/);
+        if (match) {
+          handle = match[1].trim();
+        } else {
+          handle = profileLink.textContent.trim();
+        }
+        if (handle && !['register', 'enter', 'login'].includes(handle.toLowerCase())) {
+          const userClass = profileLink.className || '';
+          await setAuthHandle(handle);
+          await setAuthClass(userClass);
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ cf_auth_handle: handle, cf_auth_class: userClass });
+          }
+          return { handle, userClass };
+        }
+      }
+    } else {
+      const enterLink = doc.querySelector('.lang-chooser a[href*="enter"], #header a[href*="enter"], .lang-chooser a[href*="register"]');
+      if (enterLink) {
+        await setAuthHandle(null);
+        await setAuthClass(null);
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set({ cf_auth_handle: null, cf_auth_class: null });
+        }
+        return { handle: null, userClass: null };
+      }
+    }
+  } catch (e) {
+    // Graceful fallback on network/CORS error
+  }
+  return null;
+}
+
 async function getCachedContestProblemCounts() {
   return get(KEYS.CONTEST_PROBLEM_COUNTS);
 }
@@ -295,6 +359,9 @@ export {
   setHandle,
   getAuthHandle,
   setAuthHandle,
+  getAuthClass,
+  setAuthClass,
+  syncAuthFromCodeforces,
   getCachedContestList,
   setCachedContestList,
   getCachedGymMetadata,

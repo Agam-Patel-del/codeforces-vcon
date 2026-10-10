@@ -21,7 +21,8 @@ function manifestPlugin(targetBrowser = 'chrome') {
           'unlimitedStorage'
         ],
         host_permissions: [
-          'https://codeforces.com/api/*'
+          'https://codeforces.com/*',
+          'https://*.codeforces.com/*'
         ],
         content_scripts: [
           {
