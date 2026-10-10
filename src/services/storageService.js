@@ -3,20 +3,20 @@ const KEYS = {
   AUTH_HANDLE: 'cf_auth_handle',
   CONTEST_LIST: 'cf_contest_list',
   GYM_METADATA: 'cf_gym_metadata',
-  VIRTUAL_CONTESTS: 'cf_virtual_contests_v3',
+  VIRTUAL_CONTESTS: 'cf_virtual_contests_v4',
   RATING_HISTORY: 'cf_rating_history',
-  CONTEST_RATING_CHANGES: 'cf_rating_changes_v3',
+  CONTEST_RATING_CHANGES: 'cf_rating_changes_v4',
   LAST_SYNC: 'cf_last_sync',
   HANDLE_LRU: 'cf_handle_lru',
   OFFICIAL_SOLVES: 'cf_official_solves',
   CONTEST_PROBLEM_COUNTS: 'cf_contest_problem_counts',
-  PERFORMANCE_RATINGS: 'cf_performance_ratings',
+  PERFORMANCE_RATINGS: 'cf_performance_ratings_v4',
   ALL_SOLVED: 'cf_all_solved'
 };
 
 const MAX_CACHED_HANDLES = 25;
 
-// Automatically purge any obsolete/old version storage keys (e.g. _v1, _v2, _v3)
+// Automatically purge any obsolete/old version storage keys
 function purgeLegacyStorageKeys() {
   const currentKeySet = new Set(Object.values(KEYS));
 
@@ -51,7 +51,6 @@ function getStorage() {
     return chrome.storage.local;
   }
   
-  // Fallback to localStorage for development
   return {
     get: (keys, callback) => {
       const result = {};

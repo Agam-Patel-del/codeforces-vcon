@@ -11,7 +11,7 @@ When you complete a virtual contest, your total points and penalties are calcula
 ### A. Codeforces Scoring (CF Rules)
 For problems with initial point value $M$ in a contest of duration $D_{\text{minutes}}$ (default 120 min for 2h, 150 min for 2.5h):
 
-$$\text{Problem Points} = \max\left(0.3 \times M,\; M - \frac{M}{C_{\text{time}}} \times T_{\text{minutes}} - 50 \times W\right)$$
+$$\text{Problem Points} = \max\left(\text{round}(0.3 \times M),\; M - \left\lfloor \frac{M \times T_{\text{minutes}}}{C_{\text{time}}} \right\rfloor - 50 \times W\right)$$
 
 Where the time coefficient $C_{\text{time}}$ scales with contest duration:
 $$C_{\text{time}} = D_{\text{minutes}} \times \frac{25}{12} = \frac{D_{\text{minutes}}}{0.48}$$
@@ -19,7 +19,7 @@ $$C_{\text{time}} = D_{\text{minutes}} \times \frac{25}{12} = \frac{D_{\text{min
 * For a **2-hour contest** ($D = 120\text{ min}$): $C_{\text{time}} = 250$
 * For a **2.5-hour contest** ($D = 150\text{ min}$): $C_{\text{time}} = 312.5$
 * For a **2h 15m contest** ($D = 135\text{ min}$): $C_{\text{time}} = 281.25$
-* $T_{\text{minutes}}$: Minutes elapsed from contest start to your Accepted (`OK`) submission.
+* $T_{\text{minutes}}$: Minutes elapsed from contest start to your Accepted (`OK`) submission ($\lfloor \text{seconds} / 60 \rfloor$).
 * $W$: Number of incorrect attempts prior to Accepted (excluding compilation errors and pretest 1 failures).
 
 ### B. ICPC Scoring

@@ -139,9 +139,10 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
             myPenalty += solveTimeMinutes + 10 * wrongTries;
           } else {
             const maxPoints = p.points;
-            let pts = maxPoints - (maxPoints / timeCoefficient) * solveTimeMinutes - 50 * wrongTries;
-            pts = Math.max(pts, maxPoints * 0.3);
-            myPoints += Math.round(pts);
+            const timeLoss = Math.floor((maxPoints * solveTimeMinutes) / timeCoefficient);
+            let pts = maxPoints - timeLoss - 50 * wrongTries;
+            pts = Math.max(pts, Math.round(maxPoints * 0.3));
+            myPoints += pts;
           }
         }
       });
