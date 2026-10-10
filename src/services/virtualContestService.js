@@ -116,6 +116,10 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
       let myPenalty = 0;
       const contestType = standingsData.contest.type; // 'CF' or 'ICPC'
       
+      const contestDurationSeconds = (standingsData.contest && standingsData.contest.durationSeconds) || (contestInfo && contestInfo.durationSeconds) || 7200;
+      const durationMinutes = Math.max(1, Math.round(contestDurationSeconds / 60));
+      const timeCoefficient = (durationMinutes * 25) / 12;
+
       standingsData.problems.forEach(p => {
         const okSub = submissions.find(s => s.verdict === 'OK' && s.problem.index === p.index);
         if (okSub) {
@@ -135,7 +139,7 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
             myPenalty += solveTimeMinutes + 10 * wrongTries;
           } else {
             const maxPoints = p.points;
-            let pts = maxPoints - (maxPoints / 250) * solveTimeMinutes - 50 * wrongTries;
+            let pts = maxPoints - (maxPoints / timeCoefficient) * solveTimeMinutes - 50 * wrongTries;
             pts = Math.max(pts, maxPoints * 0.3);
             myPoints += Math.round(pts);
           }
