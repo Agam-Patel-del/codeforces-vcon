@@ -21,7 +21,7 @@ import {
   setCachedRatingHistory,
   setCachedAllSolved
 } from '../services/storageService.js';
-import { getContestType } from '../utils/contest.js';
+import { getContestType, isCombinedDiv1Div2Contest } from '../utils/contest.js';
 import { formatDateTime } from '../utils/dates.js';
 
 const ITEMS_PER_PAGE = 50;
@@ -135,7 +135,12 @@ function VirtualContests() {
       // Division filter
       if (filter !== 'all') {
         const div = c.contestType || getContestType(c.contestName, c.contestId);
-        if (div !== filter) return false;
+        if (filter === 'div1' || filter === 'div2') {
+          const isCombined = isCombinedDiv1Div2Contest(c.contestName);
+          if (!isCombined && div !== filter) return false;
+        } else if (div !== filter) {
+          return false;
+        }
       }
 
       // Solved count filter

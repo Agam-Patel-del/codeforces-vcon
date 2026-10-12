@@ -77,6 +77,8 @@ function VirtualContestRow({ contest, index, handle, onClick }) {
       <td className="bottom">
         {contest.isTeam ? (
           <span style={{ color: '#888' }}>-</span>
+        ) : contest.predictedRatingDelta == null ? (
+          <span className={getRatingColorClass(ratingBefore)}>{ratingBefore ?? '-'}</span>
         ) : (
           <>
             <span className={getRatingColorClass(ratingBefore)}>{ratingBefore ?? '-'}</span>

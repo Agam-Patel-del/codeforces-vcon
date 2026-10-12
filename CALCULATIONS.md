@@ -143,6 +143,25 @@ $$\text{Trend Difference} = \overline{R}_{\text{last 5}} - \overline{R}_{\text{a
 
 ---
 
+## 6. Division Eligibility & Official Rating Rules
+
+Codeforces restricts rated participation based on current rating and contest division. The engine mirrors these rules to mark ineligible participations with an `(ineligible)` tag, leaving their projected delta unchanged ($\Delta = \text{null}$) while still providing an accurate **Performance Rating**:
+
+| Contest Category | Rated Eligibility Criteria | Behavior if Ineligible |
+|---|---|---|
+| **Div. 1** (Standalone or Parallel) | $\text{Rating} \ge 1900$ (Candidate Master+) | Unrated / Ineligible for $\text{Rating} < 1900$ |
+| **Standalone Div. 2** (Post-Round 480 / May 2018) | $\text{Rating} < 2100$ (Rated for Candidate Masters) | Unrated / Ineligible for $\text{Rating} \ge 2100$ |
+| **Parallel Div. 2** (when Div. 1 is held simultaneously) | $\text{Rating} < 1900$ (Candidate Masters must do Div. 1) | Unrated / Ineligible for $\text{Rating} \ge 1900$ |
+| **Educational Rounds** | $\text{Rating} < 2100$ (Rated for Candidate Masters) | Unrated / Ineligible for $\text{Rating} \ge 2100$ |
+| **Div. 3** | $\text{Rating} < 1600$ | Unrated / Ineligible for $\text{Rating} \ge 1600$ |
+| **Div. 4** | $\text{Rating} < 1400$ | Unrated / Ineligible for $\text{Rating} \ge 1400$ |
+| **Div. 1 + Div. 2 / Global Rounds** | All rated participants | Rated for all divisions |
+
+> [!NOTE]
+> Even when marked as `(ineligible)`, the contestant's pure **Performance Rating ($R_{\text{perf}}$)** is still calculated against the official standings, allowing contestants to evaluate their strength against higher-tier divisions without distorting simulated rating progression.
+
+---
+
 ## Summary of Terms
 
 | Term | Meaning |
@@ -150,5 +169,6 @@ $$\text{Trend Difference} = \overline{R}_{\text{last 5}} - \overline{R}_{\text{a
 | **Simulated Rank** | Your placing if your virtual score were slotted directly into the live contest leaderboard. |
 | **Performance Rating** | The pure rating level of your performance in that round (where $\Delta = 0$). |
 | **Rating Delta ($\Delta$)** | The projected rating change ($+ / -$) you would have earned had the round been official. |
+| **(ineligible)** | Tag indicating rating delta is unrated because the user's rating is outside the contest division limits. |
 | **Historical Baseline** | Your all-time average performance rating across all completed virtual contests. |
 | **Last 5 Avg. Perf** | Your recent average performance rating, reflecting your current form today. |

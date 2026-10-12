@@ -1,7 +1,30 @@
 import * as api from '../api/codeforcesApi.js';
 import * as storage from './storageService.js';
 import * as ratingService from './ratingService.js';
-import { getVirtualContestKey, getContestUrl, getVirtualStandingsUrl, getContestType } from '../utils/contest.js';
+import {
+  getVirtualContestKey,
+  getContestUrl,
+  getVirtualStandingsUrl,
+  getContestType,
+  isCombinedDiv1Div2Contest
+} from '../utils/contest.js';
+
+// Codeforces Round #480 timestamp (May 8, 2018): Blog 59228 rating thresholds update
+const CF_ROUND_480_TIMESTAMP = 1525791900;
+
+function hasParallelDivContest(contestMap, contestId, contestStartTime, targetDiv) {
+  if (!contestMap || !contestStartTime) return false;
+  for (const other of contestMap.values()) {
+    if (other.startTimeSeconds === contestStartTime && other.id !== contestId) {
+      const otherName = (other.name || '').toLowerCase();
+      const hasDiv1 = otherName.includes('div. 1') || otherName.includes('div 1');
+      const hasDiv2 = otherName.includes('div. 2') || otherName.includes('div 2');
+      if (targetDiv === 'div1' && hasDiv1 && !hasDiv2) return true;
+      if (targetDiv === 'div2' && hasDiv2 && !hasDiv1) return true;
+    }
+  }
+  return false;
+}
 
 async function discoverVirtualContests(handle) {
   const status = await api.getUserStatus(handle);
@@ -90,6 +113,12 @@ function createQuickVirtualContest(v, contestMap, problemCounts, gymMetadata = {
 }
 
 async function enrichVirtualContest(contestId, virtualStartTime, submissions, handle, contestMap, participationType = 'virtual', { isTeam = false, teamName = null, teamMembers = [] } = {}) {
+  if (!contestMap || contestMap.size === 0) {
+    const cachedList = await storage.getCachedContestList();
+    if (cachedList && cachedList.length > 0) {
+      contestMap = new Map(cachedList.map(c => [c.id, c]));
+    }
+  }
   const isGym = contestId >= 100000;
   const contestInfo = contestMap ? contestMap.get(contestId) : null;
   
@@ -234,25 +263,31 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
 
   if (!isGym && !isTeam) {
     ratingBefore = await ratingService.getRatingAtTime(handle, virtualStartTime);
-    
-    if (resolvedContestType === 'div3' && ratingBefore >= 1600) {
+    const contestTime = contestStartTime || virtualStartTime;
+    const isCombined = isCombinedDiv1Div2Contest(contestName);
+
+    if (resolvedContestType === 'div4' && ratingBefore >= 1400) {
       isUnratedByDivision = true;
-    } else if (resolvedContestType === 'div4' && ratingBefore >= 1400) {
+    } else if (resolvedContestType === 'div3' && ratingBefore >= 1600) {
       isUnratedByDivision = true;
     } else if (resolvedContestType === 'educational' && ratingBefore >= 2100) {
       isUnratedByDivision = true;
-    } else if (resolvedContestType === 'div2') {
-      let isParallelDiv1 = false;
-      if (contestMap && contestStartTime) {
-        for (const other of contestMap.values()) {
-          if (other.startTimeSeconds === contestStartTime && other.id !== contestId && other.name.includes('Div. 1')) {
-            isParallelDiv1 = true;
-            break;
-          }
-        }
+    } else if (resolvedContestType === 'div2' && !isCombined) {
+      const isParallelDiv1 = hasParallelDivContest(contestMap, contestId, contestStartTime, 'div1');
+      // Under Blog 59228 rules (since Round 480, May 2018):
+      // - Standalone Div. 2: rated for Candidate Masters (< 2100)
+      // - Parallel Div. 2: Candidate Masters must register for Div. 1; Div. 2 is rated only for < 1900
+      let div2Threshold = 1900;
+      if (!isParallelDiv1 && contestTime >= CF_ROUND_480_TIMESTAMP) {
+        div2Threshold = 2100;
       }
-      const div2Threshold = isParallelDiv1 ? 1900 : 2100;
       if (ratingBefore >= div2Threshold) {
+        isUnratedByDivision = true;
+      }
+    } else if (resolvedContestType === 'div1' && !isCombined) {
+      // Div. 1 contests (standalone or parallel) are rated strictly for rating >= 1900 (Candidate Masters+)
+      // Participants with rating < 1900 are ineligible / unrated
+      if (ratingBefore < 1900) {
         isUnratedByDivision = true;
       }
     }

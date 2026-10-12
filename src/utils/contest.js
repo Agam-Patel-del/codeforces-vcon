@@ -1,14 +1,22 @@
+function isCombinedDiv1Div2Contest(contestName) {
+  if (!contestName) return false;
+  const name = contestName.toLowerCase();
+  const hasDiv1 = name.includes('div. 1') || name.includes('div 1');
+  const hasDiv2 = name.includes('div. 2') || name.includes('div 2');
+  return hasDiv1 && hasDiv2;
+}
+
 function getContestType(contestName, contestId) {
   if (contestId && contestId >= 100000) return 'gym';
   if (!contestName) return 'other';
   const name = contestName.toLowerCase();
   if (name.includes('gym')) return 'gym';
-  if (name.includes('div. 1')) return 'div1';
-  if (name.includes('div. 2')) return 'div2';
-  if (name.includes('div. 3')) return 'div3';
-  if (name.includes('div. 4')) return 'div4';
   if (name.includes('educational')) return 'educational';
-  if (name.includes('global round')) return 'global';
+  if (name.includes('global')) return 'global';
+  if (name.includes('div. 4') || name.includes('div 4')) return 'div4';
+  if (name.includes('div. 3') || name.includes('div 3')) return 'div3';
+  if (name.includes('div. 1') || name.includes('div 1')) return 'div1';
+  if (name.includes('div. 2') || name.includes('div 2')) return 'div2';
   return 'other';
 }
 
@@ -52,6 +60,7 @@ function getVirtualStandingsUrl(contestId) {
 }
 
 export {
+  isCombinedDiv1Div2Contest,
   getContestType,
   getContestTypeLabel,
   getContestUrl,
