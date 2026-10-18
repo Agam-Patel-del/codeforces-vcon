@@ -76,7 +76,7 @@ function CodeforcesHeader({ handle }) {
               style={{ height: '65px' }}
               alt="Codeforces"
               title="Codeforces"
-              src="https://codeforces.org/s/11564/images/codeforces-sponsored-by-ton.png"
+              src="https://codeforces.org/s/86310/images/codeforces-logo-with-telegram-555x130.png"
             />
           </a>
         </div>
