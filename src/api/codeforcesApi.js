@@ -34,7 +34,14 @@ function acquireToken() {
   return p;
 }
 
+const REQUEST_TIMEOUT_MS = 20000;
+
 async function fetchApi(endpoint, params = {}) {
+  // Fail fast if browser knows it is offline
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error('No internet connection. Please check your network.');
+  }
+
   const url = new URL(`${BASE_URL}${endpoint}`);
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
@@ -49,10 +56,22 @@ async function fetchApi(endpoint, params = {}) {
 
   const executeRequest = async (retries = 3) => {
     for (let attempt = 1; attempt <= retries; attempt++) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw new Error('No internet connection. Please check your network.');
+      }
+
       await acquireToken();
 
+      const controller = new AbortController();
+      let timedOut = false;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+
       try {
-        const response = await fetch(urlString);
+        const response = await fetch(urlString, { signal: controller.signal });
+        clearTimeout(timeoutId);
         
         // Handle Cloudflare 503 or HTML response on rate limit
         if (!response.ok) {
@@ -81,7 +100,24 @@ async function fetchApi(endpoint, params = {}) {
         }
         return data.result;
       } catch (err) {
-        if (attempt === retries || err instanceof CodeforcesApiError) {
+        clearTimeout(timeoutId);
+
+        // If request timed out, fail immediately instead of retrying for 2+ minutes
+        if (timedOut || err.name === 'AbortError') {
+          throw new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. Please check your internet connection.`);
+        }
+
+        // Do not retry on explicit Codeforces API errors (e.g. handle not found)
+        if (err instanceof CodeforcesApiError) {
+          throw err;
+        }
+
+        // Do not retry if device is offline
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          throw new Error('No internet connection. Please check your network.');
+        }
+
+        if (attempt === retries) {
           throw err;
         }
         await delay(2000);

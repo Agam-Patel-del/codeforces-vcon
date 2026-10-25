@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import { 
+  loadFromCache, 
   loadOrDiscoverContests, 
   enrichSingleContest 
 } from '../services/virtualContestService.js';
@@ -26,16 +27,18 @@ import { formatDateTime } from '../utils/dates.js';
 
 const ITEMS_PER_PAGE = 50;
 
-function VirtualContests() {
+function VirtualContests({ cacheOnly = false }) {
   const [handle, setHandleState] = useState('');
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [loadingProgress, setLoadingProgress] = useState({});
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
   const [lastSync, setLastSync] = useState(null);
 
   const contestMapRef = useRef(new Map());
+  const contestsRef = useRef([]);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState('all');
@@ -51,6 +54,26 @@ function VirtualContests() {
       const storedHandle = await getHandle();
       if (storedHandle) {
         setHandleState(storedHandle);
+
+        // Load instantly from cache if available so UI renders immediately
+        try {
+          const cached = await loadFromCache(storedHandle);
+          if (cached && cached.contests.length > 0) {
+            contestMapRef.current = cached.contestMap || new Map();
+            contestsRef.current = cached.contests;
+            setContests(cached.contests);
+            setLastSync(cached.lastSync);
+          }
+        } catch (e) {
+          // Cache load failed, fall through to network fetch
+        }
+
+        // If navigating back from contest detail page, skip network fetch completely
+        if (cacheOnly) {
+          return;
+        }
+
+        // On browser reload or fresh page open, check network for new contests
         fetchData(storedHandle, false);
       }
     };
@@ -59,22 +82,50 @@ function VirtualContests() {
 
   const fetchData = async (targetHandle, forceRefresh = false) => {
     if (!targetHandle) return;
-    
-    setLoading(true);
+
+    await saveHandleToStorage(targetHandle);
+
+    // Show loading spinner only if no data is currently displayed
+    const hasExistingData = (contestsRef.current && contestsRef.current.length > 0);
+    if (!hasExistingData) {
+      setLoading(true);
+      setLoadingMessage('Discovering virtual contests...');
+      setLoadingProgress({});
+    }
     setError(null);
-    setLoadingMessage('Discovering virtual contests...');
-    setLoadingProgress({});
+    setWarning(null);
 
     try {
-      await saveHandleToStorage(targetHandle);
-      
       const result = await loadOrDiscoverContests(targetHandle);
       contestMapRef.current = result.contestMap || new Map();
-      
+      contestsRef.current = result.contests || [];
       setContests(result.contests || []);
       setLastSync(result.lastSync || Date.now());
     } catch (err) {
-      setError(err.message || 'An unknown error occurred');
+      // On failure, try to fall back to cached data + warning instead of a blocking error
+      try {
+        const cachedFallback = await loadFromCache(targetHandle);
+        const hasCached = cachedFallback && cachedFallback.contests.length > 0;
+        const alreadyHasData = (contestsRef.current && contestsRef.current.length > 0);
+
+        if (alreadyHasData || hasCached) {
+          if (!alreadyHasData && hasCached) {
+            contestMapRef.current = cachedFallback.contestMap || new Map();
+            contestsRef.current = cachedFallback.contests;
+            setContests(cachedFallback.contests);
+            setLastSync(cachedFallback.lastSync);
+          }
+          setWarning(err.message || 'Failed to fetch latest data. Showing cached data.');
+        } else {
+          setError(err.message || 'An unknown error occurred');
+        }
+      } catch (cacheErr) {
+        if (contestsRef.current && contestsRef.current.length > 0) {
+          setWarning(err.message || 'Failed to fetch latest data. Showing cached data.');
+        } else {
+          setError(err.message || 'An unknown error occurred');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -83,6 +134,7 @@ function VirtualContests() {
   const handleLoad = (newHandle) => {
     if (!newHandle) return;
     setHandleState(newHandle);
+    contestsRef.current = [];
     setContests([]);
     fetchData(newHandle, true);
   };
@@ -93,7 +145,9 @@ function VirtualContests() {
       await setCachedVirtualContests(handle, null);
       await setCachedRatingHistory(handle, null);
       await setCachedAllSolved(handle, null);
+      contestsRef.current = [];
       setContests([]);
+      setWarning(null);
       fetchData(handle, true);
     } catch (e) {
       setError('Failed to force refresh data: ' + (e.message || e));
@@ -112,6 +166,7 @@ function VirtualContests() {
       setHandleState('');
       setLastSync(null);
       setError(null);
+      setWarning(null);
       contestMapRef.current = new Map();
     } catch (e) {
       setError('Failed to clear data: ' + (e.message || e));
@@ -226,7 +281,6 @@ function VirtualContests() {
 
   const enrichingRef = useRef(new Set());
   const paginatedContestsRef = useRef(paginatedContests);
-  const contestsRef = useRef(contests);
   const batchedUpdatesRef = useRef([]);
   const batchTimeoutRef = useRef(null);
 
@@ -380,6 +434,18 @@ function VirtualContests() {
         )}
         
         {error && <ErrorState error={error} onRetry={handleForceRefresh} />}
+
+        {warning && (
+          <div className="warning-notice">
+            <span>&#9888; {warning}</span>
+            <button className="cf-btn" onClick={() => fetchData(handle, true)} style={{ marginLeft: '10px' }}>
+              Retry
+            </button>
+            <button className="cf-btn" onClick={() => setWarning(null)} style={{ marginLeft: '6px' }}>
+              Dismiss
+            </button>
+          </div>
+        )}
         
         {!loading && !error && contests.length > 0 && (
           <>

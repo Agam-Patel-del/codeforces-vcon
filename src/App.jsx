@@ -1,24 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import VirtualContests from './pages/VirtualContests.jsx';
 import ContestDetailsPage from './pages/ContestDetailsPage.jsx';
 
 function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+  const previousHashRef = useRef(null);
 
   useEffect(() => {
     const handleHashChange = () => {
+      previousHashRef.current = currentHash;
       setCurrentHash(window.location.hash);
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [currentHash]);
 
   const renderPage = () => {
     const hash = currentHash.replace(/^#\/?/, '');
     
     if (hash === '' || hash === '/') {
-      return <VirtualContests />;
+      const prevHash = previousHashRef.current ? previousHashRef.current.replace(/^#\/?/, '') : '';
+      const cameFromContest = prevHash.startsWith('contest/');
+      return <VirtualContests cacheOnly={cameFromContest} />;
     }
 
     if (hash.startsWith('contest/')) {

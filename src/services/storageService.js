@@ -266,10 +266,16 @@ async function setAuthClass(cls) {
 async function syncAuthFromCodeforces() {
   try {
     if (typeof fetch === 'undefined') return null;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch('https://codeforces.com/', {
       credentials: 'include',
-      cache: 'no-cache'
-    });
+      cache: 'no-cache',
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
     if (!response.ok) return null;
     const html = await response.text();
     if (typeof DOMParser === 'undefined') return null;

@@ -354,27 +354,40 @@ async function enrichVirtualContest(contestId, virtualStartTime, submissions, ha
   };
 }
 
+async function loadFromCache(handle) {
+  const cachedData = await storage.getCachedVirtualContests(handle) || [];
+  if (!cachedData || cachedData.length === 0) return null;
+
+  let contestList = await storage.getCachedContestList();
+  const contestMap = contestList ? new Map(contestList.map(c => [c.id, c])) : new Map();
+
+  return {
+    contests: cachedData,
+    contestMap,
+    lastSync: await storage.getLastSyncTime() || Date.now()
+  };
+}
+
 async function loadOrDiscoverContests(handle) {
   const cachedData = await storage.getCachedVirtualContests(handle) || [];
   const cachedMap = new Map(cachedData.map(c => [c.key, c]));
 
   let contestList = await storage.getCachedContestList();
-  if (!contestList) {
-    try {
-      contestList = await api.getContestList();
-      await storage.setCachedContestList(contestList);
-    } catch (e) {
-      contestList = [];
-    }
-  }
-  const contestMap = new Map(contestList.map(c => [c.id, c]));
-  const problemCounts = await getContestProblemCountsMap();
-  const gymMetadata = await storage.getCachedGymMetadata();
+  const contestListPromise = (!contestList)
+    ? api.getContestList().then(async list => {
+        await storage.setCachedContestList(list);
+        return list;
+      }).catch(() => [])
+    : Promise.resolve(contestList);
 
-  const [discovered] = await Promise.all([
+  const [resolvedContestList, discovered] = await Promise.all([
+    contestListPromise,
     discoverVirtualContests(handle),
     ratingService.refreshRatingHistory(handle)
   ]);
+  const contestMap = new Map((resolvedContestList || []).map(c => [c.id, c]));
+  const problemCounts = await getContestProblemCountsMap();
+  const gymMetadata = await storage.getCachedGymMetadata();
   
   const merged = [];
   let unenrichedCount = 0;
@@ -435,9 +448,6 @@ async function flushStorageUpdates() {
   }
 }
 
-/**
- * Enriches a single contest on demand and incrementally caches it in storage.
- */
 async function enrichSingleContest(handle, contestObj, contestMap) {
   if (contestObj.isEnriched && contestObj.rank != null) {
     return contestObj;
@@ -509,6 +519,7 @@ export {
   discoverVirtualContests,
   enrichVirtualContest,
   enrichSingleContest,
+  loadFromCache,
   loadOrDiscoverContests,
   getAllVirtualContests,
   syncVirtualContests,
